@@ -1,0 +1,50 @@
+# Secrets & Config
+.env
+*.env
+backend/.env
+
+# Python & Virtual Environments
+venv/
+env/
+backend/venv_coqui/
+backend/venv_cuda/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Model Checkpoints & Large Binary Files (>100MB max GitHub limit)
+*.pth
+*.pt
+*.bin
+*.onnx
+*.engine
+*.safetensors
+*.tar.gz
+*.zip
+
+# Audio outputs & generated recordings
+backend/voice_dataset/mcqueen_model/
+backend/voice_dataset/temp_worker_out.wav
+*.wav
+!backend/voice_dataset/finetune_dataset/wavs/*.wav
+
+# Node / React (pixar_eye_system)
+node_modules/
+pixar_eye_system/node_modules/
+pixar_eye_system/dist/
+pixar_eye_system/.vite/
+
+# Flutter (emiot_app)
+emiot_app/.dart_tool/
+emiot_app/.flutter-plugins
+emiot_app/.flutter-plugins-dependencies
+emiot_app/.pub-cache/
+emiot_app/build/
+
+# IDE / OS files
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
