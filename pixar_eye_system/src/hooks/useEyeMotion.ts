@@ -14,7 +14,7 @@ export interface EyeMotionOutput {
   gazeY: MotionValue<number>;
   parallaxX: MotionValue<number>;
   parallaxY: MotionValue<number>;
-  setGaze: (point: GazePoint) => void;
+  setGaze: (point: GazePoint, isTouch?: boolean) => void;
   releaseGaze: () => void;
 }
 
@@ -39,6 +39,7 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
   const microOffsetRef = useRef<GazePoint>({ x: 0, y: 0 });
   const lastUserInteractionTime = useRef<number>(Date.now());
   const isUserInteractingRef = useRef(false);
+  const isTouchRef = useRef(false);
 
   // Micro-Saccades & Idle Lookaround Generator (Movie Accurate: 1-3 pixels amplitude ONLY!)
   useEffect(() => {
@@ -68,6 +69,7 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
         const timeSinceUser = Date.now() - lastUserInteractionTime.current;
         if (timeSinceUser > 4000) {
           isUserInteractingRef.current = false;
+          isTouchRef.current = false;
           // Pixar calm gaze pattern: slight look side, pause, return
           const idleTargets: GazePoint[] = [
             { x: 0.25, y: -0.08 },
@@ -108,7 +110,7 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
       const finalTargetX = targetRef.current.x + microOffsetRef.current.x + breathingX;
       const finalTargetY = targetRef.current.y + microOffsetRef.current.y + breathingY;
 
-      if (isUserInteractingRef.current) {
+      if (isUserInteractingRef.current && isTouchRef.current) {
         // BGMI-like instant 1:1 tracking with zero physics drag
         gazeRef.current.x = finalTargetX;
         gazeRef.current.y = finalTargetY;
@@ -156,12 +158,13 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
   // Set user gaze target explicitly (clamped -1 to 1)
   // This is called 60-120 times per second during touch!
   // It ONLY updates a ref, triggering ZERO React renders.
-  const setGaze = (point: GazePoint) => {
+  const setGaze = (point: GazePoint, isTouch: boolean = true) => {
     const clampedX = Math.max(-1, Math.min(1, point.x));
     const clampedY = Math.max(-1, Math.min(1, point.y));
 
     targetRef.current = { x: clampedX, y: clampedY };
     isUserInteractingRef.current = true;
+    isTouchRef.current = isTouch;
     lastUserInteractionTime.current = Date.now();
   };
 

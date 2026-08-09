@@ -130,7 +130,9 @@ export const FaceScreen: React.FC = () => {
       const rect = containerRef.current.getBoundingClientRect();
       const normX = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
       const normY = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
-      setGaze({ x: normX, y: normY });
+      
+      const isTouch = e.pointerType === 'touch' || e.pointerType === 'pen';
+      setGaze({ x: normX, y: normY }, isTouch);
     },
     [isFaceTracking, setGaze]
   );
