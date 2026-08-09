@@ -6,14 +6,28 @@ const targetFile = path.join(__dirname, 'node_modules', '@mintplex-labs', 'piper
 if (fs.existsSync(targetFile)) {
   let content = fs.readFileSync(targetFile, 'utf8');
   
+  // Patch 1: Redirect HuggingFace model downloads to local /voice folder
   content = content.replace(
     /const HF_BASE = "https:\/\/huggingface\.co\/diffusionstudio\/piper-voices\/resolve\/main";/,
     'const HF_BASE = window.location.origin + "/voice";'
   );
   
+  // Patch 2: Fix the voice path map to use our local flat file
   content = content.replace(
     /"en_US-hfc_female-medium": "en\/en_US\/hfc_female\/medium\/en_US-hfc_female-medium\.onnx"/,
     '"en_US-hfc_female-medium": "piper_voice.onnx"'
+  );
+
+  // Patch 3: Redirect ONNX Runtime WASM to local /voice/wasm folder
+  content = content.replace(
+    /const ONNX_BASE = "https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/onnxruntime-web\/[^"]+\/";/,
+    'const ONNX_BASE = window.location.origin + "/voice/wasm/";'
+  );
+
+  // Patch 4: Redirect Piper Phonemize WASM to local /voice/wasm folder
+  content = content.replace(
+    /const WASM_BASE = "https:\/\/cdn\.jsdelivr\.net\/npm\/@diffusionstudio\/piper-wasm@[^"]+\/build\/piper_phonemize";/,
+    'const WASM_BASE = window.location.origin + "/voice/wasm/piper_phonemize";'
   );
 
   fs.writeFileSync(targetFile, content, 'utf8');
