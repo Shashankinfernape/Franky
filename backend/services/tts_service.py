@@ -31,7 +31,7 @@ VOICES = {
     },
 }
 
-DEFAULT_VOICE = "xtts_original"
+DEFAULT_VOICE = "vits_lite"
 
 
 class TTSService:

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Emiot</string>
+    <string name="title_activity_main">Emiot</string>
+    <string name="package_name">pixar.emiot.app</string>
+    <string name="custom_url_scheme">pixar.emiot.app</string>
+</resources>
