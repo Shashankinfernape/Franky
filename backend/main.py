@@ -165,6 +165,24 @@ async def websocket_endpoint(websocket: WebSocket):
                             "state": personality_engine.get_state_payload()
                         })
 
+                elif msg_type == "set_voice":
+                    voice_id = data.get("voice_id", "")
+                    result = tts_service.set_voice(voice_id)
+                    if websocket.client_state == WebSocketState.CONNECTED:
+                        await websocket.send_json({
+                            "type": "voice_changed",
+                            "voice": tts_service.get_active_voice_info(),
+                            "ok": result["ok"]
+                        })
+
+                elif msg_type == "get_voices":
+                    if websocket.client_state == WebSocketState.CONNECTED:
+                        await websocket.send_json({
+                            "type": "voices_list",
+                            "voices": tts_service.get_voices(),
+                            "active": tts_service.active_voice
+                        })
+
             except json.JSONDecodeError:
                 print("Malformed WebSocket JSON")
 

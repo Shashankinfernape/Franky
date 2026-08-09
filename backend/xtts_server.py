@@ -18,7 +18,10 @@ print(f"[XTTS Worker] Loading fine-tuned McQueen model on {device.upper()}...")
 BASE_DIR       = Path(__file__).parent
 BASE_MODEL_DIR = Path(os.path.expanduser("~")) / "AppData/Local/tts/tts_models--multilingual--multi-dataset--xtts_v2"
 FT_RUN_DIR     = BASE_DIR / "voice_dataset/mcqueen_model/McQueen_XTTS_FT-August-06-2026_04+33PM-0000000"
-BEST_MODEL_PTH = FT_RUN_DIR / "best_model.pth"   # lowest eval-loss checkpoint (~epoch 45)
+# Checkpoint: use best_model_630.pth (lowest eval-loss checkpoint at step 630)
+BEST_MODEL_PTH = FT_RUN_DIR / "best_model_630.pth"
+if not BEST_MODEL_PTH.exists():
+    BEST_MODEL_PTH = FT_RUN_DIR / "best_model.pth"
 
 # Best reference audio: the longest McQueen clip (mcqueen_0012 = 5.78s)
 REF_AUDIO = str(BASE_DIR / "voice_dataset/finetune_dataset/wavs/mcqueen_0012.wav")
@@ -43,9 +46,9 @@ try:
             eval=True,
             strict=False,
         )
-        print("[XTTS Worker] ✅ Fine-tuned McQueen model loaded!")
+        print("[XTTS Worker] [OK] Fine-tuned McQueen model loaded!")
     else:
-        print(f"[XTTS Worker] ⚠️ Fine-tuned model not found at {BEST_MODEL_PTH}, falling back to base model")
+        print(f"[XTTS Worker] [WARN] Fine-tuned model not found at {BEST_MODEL_PTH}, falling back to base model")
         tts_model.load_checkpoint(
             config,
             checkpoint_dir=str(BASE_MODEL_DIR),
@@ -64,7 +67,7 @@ try:
             gpt_cond_chunk_len=3,
             max_ref_length=10,
         )
-    print("[XTTS Worker] ✅ Speaker latents cached — READY FOR SYNTHESIS!")
+    print("[XTTS Worker] [OK] Speaker latents cached — READY FOR SYNTHESIS!")
 
 except Exception as e:
     print(f"[XTTS Worker Init Error] {e}")
@@ -93,11 +96,11 @@ def synthesize(req: TTSRequest):
                 language="en",
                 gpt_cond_latent=gpt_cond_latent,
                 speaker_embedding=speaker_embedding,
-                temperature=0.7,
+                temperature=0.3,          # sharp Owen Wilson pitch, no low-end drift
                 length_penalty=1.0,
-                repetition_penalty=10.0,
-                top_k=50,
-                top_p=0.85,
+                repetition_penalty=2.0,   # smooth, natural pacing
+                top_k=20,                 # focused acoustic sampling
+                top_p=0.8,
             )
 
         wav = out["wav"]

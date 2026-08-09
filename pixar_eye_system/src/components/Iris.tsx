@@ -14,8 +14,8 @@ export const Iris: React.FC<IrisProps> = ({ pupilScale = 1.0, parallaxOffset }) 
     <div
       className="relative rounded-full flex items-center justify-center shadow-[inset_0_4px_16px_rgba(0,0,0,0.5),0_0_8px_rgba(13,27,57,0.4)] overflow-hidden"
       style={{
-        width: 'min(22vh, 16vw)',
-        height: 'min(22vh, 16vw)',
+        width: 'min(14vw, 14vw)',
+        height: 'min(14vw, 14vw)',
         background: `radial-gradient(circle at 48% 46%,
           #000000 0%,
           #65DCCF 32%,

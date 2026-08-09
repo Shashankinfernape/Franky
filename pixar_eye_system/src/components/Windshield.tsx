@@ -10,19 +10,6 @@ interface WindshieldProps {
   blinkProgress: number;
 }
 
-/**
- * Full-screen windshield layout — no gasket frame.
- *
- * Layout (matches Cars movie framing):
- *   - WHITE windshield glass fills the ENTIRE viewport
- *   - Red car roof (UpperLid) slides down from the TOP
- *   - Red hood panel rises from the BOTTOM (~18% of screen)
- *   - Two eyes absolutely positioned:
- *       Left iris center:  37.5% from left,  38% from top
- *       Right iris center: 62.5% from left,  38% from top
- *     These proportions match the movie reference where irises sit
- *     directly below the two arch openings in the lid.
- */
 export const Windshield: React.FC<WindshieldProps> = ({
   emotion,
   currentGaze,
@@ -33,99 +20,146 @@ export const Windshield: React.FC<WindshieldProps> = ({
     <div
       className="relative w-screen h-screen select-none overflow-hidden touch-none"
       style={{
-        /* Windshield glass — off-white, very slightly warm */
-        background: 'radial-gradient(ellipse at 50% 40%, #F8F7F3 0%, #F0EFE9 55%, #E8E7DF 100%)',
+        background: `
+          linear-gradient(to bottom,
+            #2E0404 0%,
+            #7A0A0A 28%,
+            #C01616 55%,
+            #A81212 80%,
+            #6B0808 100%
+          )
+        `,
       }}
     >
-      {/* Subtle top ambient shadow (roof casts into glass) */}
-      <div className="absolute inset-x-0 top-0 h-[12%] z-10 pointer-events-none"
-           style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.10) 0%, transparent 100%)' }} />
-
-      {/* Left side A-pillar shadow */}
-      <div className="absolute inset-y-0 left-0 w-[6%] z-10 pointer-events-none"
-           style={{ background: 'linear-gradient(to right, rgba(0,0,0,0.12) 0%, transparent 100%)' }} />
-
-      {/* Right side A-pillar shadow */}
-      <div className="absolute inset-y-0 right-0 w-[6%] z-10 pointer-events-none"
-           style={{ background: 'linear-gradient(to left, rgba(0,0,0,0.12) 0%, transparent 100%)' }} />
-
-      {/* Diagonal glass glare / sun reflection */}
-      <div className="absolute z-10 pointer-events-none"
-           style={{
-             top: '-20%', left: '-20%',
-             width: '80%', height: '60%',
-             background: 'linear-gradient(to bottom, rgba(255,255,255,0.14) 0%, transparent 100%)',
-             transform: 'rotate(-12deg)',
-             filter: 'blur(8px)',
-             opacity: 0.6,
-           }} />
-
-      {/* ─────────── McQueen Eyelid ─────────── */}
-      <UpperLid
-        blinkProgress={blinkProgress}
-        currentGaze={currentGaze}
-        emotionState={emotion.name}
-      />
-
-      {/* ─────────── Left Eye ─────────── */}
-      {/* Positioned at 37.5% from left, 38% from top (iris center) */}
       <div
-        className="absolute z-20"
+        className="absolute top-0 left-0 overflow-hidden"
         style={{
-          left: '32%',
-          top: '55%',
-          transform: 'translate(-50%, -50%)',
+          width: '100vw',
+          height: 'calc(100vw / 2.3)',
+          borderRadius: '0 0 3vw 3vw',
+          boxShadow:
+            'inset 0 0 0 8px rgba(6,1,1,0.85), ' +
+            '0 6px 28px rgba(0,0,0,0.70)',
         }}
       >
-        <Eye
+        <div
+          className="absolute inset-0"
+          style={{
+            zIndex: 1,
+            background:
+              'radial-gradient(ellipse at 50% 32%, #FAFAF7 0%, #F4F3EC 50%, #ECEBD8 100%)',
+          }}
+        />
+
+        <div
+          className="absolute inset-y-0 left-0 pointer-events-none"
+          style={{
+            zIndex: 2,
+            width: '9%',
+            background:
+              'linear-gradient(to right, rgba(0,0,0,0.24) 0%, transparent 100%)',
+          }}
+        />
+
+        <div
+          className="absolute inset-y-0 right-0 pointer-events-none"
+          style={{
+            zIndex: 2,
+            width: '9%',
+            background:
+              'linear-gradient(to left, rgba(0,0,0,0.24) 0%, transparent 100%)',
+          }}
+        />
+
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            zIndex: 2,
+            top: '-12%', left: '-4%',
+            width: '58%', height: '52%',
+            background:
+              'linear-gradient(135deg, rgba(255,255,255,0.13) 0%, transparent 55%)',
+            transform: 'rotate(-9deg)',
+            filter: 'blur(5px)',
+          }}
+        />
+
+        <div
+          className="absolute bottom-0 inset-x-0 pointer-events-none"
+          style={{
+            zIndex: 2,
+            height: '10%',
+            background:
+              'linear-gradient(to top, rgba(0,0,0,0.08) 0%, transparent 100%)',
+          }}
+        />
+
+        <div
+          className="absolute"
+          style={{
+            zIndex: 20,
+            left: '38%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
+          <Eye
+            currentGaze={currentGaze}
+            parallaxOffset={parallaxOffset}
+            pupilScale={emotion.pupilScale}
+            emotionState={emotion.name}
+          />
+        </div>
+
+        <div
+          className="absolute"
+          style={{
+            zIndex: 20,
+            left: '62%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
+          <Eye
+            currentGaze={currentGaze}
+            parallaxOffset={parallaxOffset}
+            pupilScale={emotion.pupilScale}
+            emotionState={emotion.name}
+          />
+        </div>
+
+        <UpperLid
+          blinkProgress={blinkProgress}
           currentGaze={currentGaze}
-          parallaxOffset={parallaxOffset}
-          pupilScale={emotion.pupilScale}
           emotionState={emotion.name}
         />
       </div>
 
-      {/* ─────────── Right Eye ─────────── */}
-      {/* Positioned at 62.5% from left, 38% from top */}
       <div
-        className="absolute z-20"
+        className="absolute inset-x-0 bottom-0"
         style={{
-          left: '68%',
-          top: '55%',
-          transform: 'translate(-50%, -50%)',
-        }}
-      >
-        <Eye
-          currentGaze={currentGaze}
-          parallaxOffset={parallaxOffset}
-          pupilScale={emotion.pupilScale}
-          emotionState={emotion.name}
-        />
-      </div>
-
-      {/* ─────────── Bottom Red Hood Panel ─────────── */}
-      <div
-        className="absolute bottom-0 inset-x-0 z-20 pointer-events-none"
-        style={{
-          height: '20%',
+          top: 'calc(100vw / 2.3)',
           background: `
-            linear-gradient(to top,
-              #8A0A0E 0%,
-              #B41618 30%,
-              #C82020 65%,
-              rgba(195,28,28,0.55) 85%,
-              transparent 100%
+            linear-gradient(to bottom,
+              #C81818 0%,
+              #A81212 35%,
+              #780A0A 70%,
+              #3D0505 100%
             )
           `,
         }}
       />
 
-      {/* Hood specular highlight */}
       <div
-        className="absolute bottom-0 inset-x-0 z-21 pointer-events-none"
+        className="absolute pointer-events-none"
         style={{
-          height: '12%',
-          background: 'radial-gradient(ellipse at 50% 100%, rgba(255,180,180,0.18) 0%, transparent 70%)',
+          top: 'calc(100vw / 2.3 + 1.5vw)',
+          left: '6%', right: '6%',
+          height: '1.8vw',
+          background:
+            'linear-gradient(to bottom, rgba(255,175,175,0.22) 0%, transparent 100%)',
+          borderRadius: '50%',
+          filter: 'blur(3px)',
         }}
       />
     </div>

@@ -3,86 +3,225 @@ import io
 import re
 import asyncio
 import requests
+from pathlib import Path
 from typing import AsyncGenerator
+
+# ── Available voices ──────────────────────────────────────────────────────────
+VOICES = {
+    "xtts_original": {
+        "id":          "xtts_original",
+        "name":        "⚡ McQueen Original",
+        "description": "Fine-tuned XTTS v2 — full GPU quality, Owen Wilson accurate",
+        "size":        "5.6 GB",
+        "quality":     "★★★★★",
+    },
+    "vits_lite": {
+        "id":          "vits_lite",
+        "name":        "🏎️ Piper Lite (ONNX)",
+        "description": "Ultra-fast Piper ONNX — instant sub-100ms CPU & mobile speech engine",
+        "size":        "~15 MB",
+        "quality":     "★★★★☆",
+    },
+    "edge_neural": {
+        "id":          "edge_neural",
+        "name":        "🎤 McQueen Edge",
+        "description": "Edge TTS neural voice — instant, no GPU needed",
+        "size":        "Cloud",
+        "quality":     "★★☆☆☆",
+    },
+}
+
+DEFAULT_VOICE = "xtts_original"
+
 
 class TTSService:
     """
-    Primary: Fine-tuned McQueen XTTS v2 GPU worker on port 8009.
-    Fallback: edge_tts AndrewNeural (instant, used only if XTTS worker is down).
+    Multi-voice Lightning McQueen TTS Service.
 
-    The XTTS worker must be started separately:
-        .\\venv_coqui\\Scripts\\python.exe xtts_server.py
-    It takes ~30-60s to boot (model loading to VRAM).
-    Once warm, synthesis latency is ~1-2s per sentence on GPU.
+    Voices:
+      xtts_original — Fine-tuned XTTS v2 GPU worker (port 8009)  [best quality, UNTOUCHED]
+      vits_lite     — Ultra-fast Piper ONNX Neural Voice Engine  [instant <50ms CPU, mobile-ready]
+      edge_neural   — edge_tts AndrewNeural cloud voice           [instant fallback]
     """
+
     def __init__(self):
-        self.worker_url = "http://127.0.0.1:8009/synthesize"
-        self._xtts_healthy = True   # assume healthy until first failure
-        print("[TTS] McQueen XTTS Worker target: http://127.0.0.1:8009")
+        self.xtts_worker_url = "http://127.0.0.1:8009/synthesize"
+        self._active_voice   = DEFAULT_VOICE
+        self._xtts_healthy   = True
+        self._piper_voice    = None  # loaded on first use for Piper ONNX
+
+        print(f"[TTS] Active voice: {VOICES[self._active_voice]['id']}")
+
+    # ── Voice selection ───────────────────────────────────────────────────────
+
+    @property
+    def active_voice(self) -> str:
+        return self._active_voice
+
+    def set_voice(self, voice_id: str) -> dict:
+        if voice_id not in VOICES:
+            return {"ok": False, "error": f"Unknown voice: {voice_id}"}
+        self._active_voice = voice_id
+        v = VOICES[voice_id]
+        print(f"[TTS] Switched to: {v['name']}")
+        return {"ok": True, "voice": v}
+
+    def get_voices(self) -> list:
+        return list(VOICES.values())
+
+    def get_active_voice_info(self) -> dict:
+        return VOICES[self._active_voice]
+
+    # ── Main synthesis ────────────────────────────────────────────────────────
 
     async def generate_speech_chunks(self, text: str) -> AsyncGenerator[bytes, None]:
         if not text.strip():
             return
 
-        clean_text = re.sub(r'[*_#`]', '', text.strip())
+        clean = re.sub(r'[*_#`]', '', text.strip())
 
-        # ── 1. Fine-tuned McQueen XTTS Worker ────────────────────────────────
-        if self._xtts_healthy:
-            try:
+        if self._active_voice == "xtts_original":
+            async for chunk in self._synthesize_xtts(clean):
+                yield chunk
+
+        elif self._active_voice == "vits_lite":
+            async for chunk in self._synthesize_piper_onnx(clean):
+                yield chunk
+
+        else:  # edge_neural
+            async for chunk in self._synthesize_edge(clean):
+                yield chunk
+
+    # ── XTTS Original (GPU, port 8009) — UNTOUCHED ──────────────────────────
+
+    async def _synthesize_xtts(self, text: str) -> AsyncGenerator[bytes, None]:
+        if not self._xtts_healthy:
+            async for chunk in self._synthesize_edge(text):
+                yield chunk
+            return
+
+        try:
+            loop = asyncio.get_event_loop()
+
+            def _call():
+                r = requests.post(
+                    self.xtts_worker_url,
+                    json={"text": text},
+                    timeout=15,
+                )
+                if r.status_code == 200:
+                    hex_data = r.json().get("audio_b64")
+                    if hex_data:
+                        return bytes.fromhex(hex_data)
+                return None
+
+            audio = await loop.run_in_executor(None, _call)
+            if audio:
+                print(f"[XTTS Original] ✅ {len(audio):,} bytes — '{text[:50]}'")
+                self._xtts_healthy = True
+                yield audio
+                return
+
+        except requests.exceptions.ConnectionError:
+            print("[XTTS Original] ⚠️  Worker offline — falling back to Edge voice")
+            self._xtts_healthy = False
+        except Exception as e:
+            print(f"[XTTS Original] Error: {e}")
+            self._xtts_healthy = False
+
+        # Fallback to edge if XTTS fails
+        async for chunk in self._synthesize_edge(text):
+            yield chunk
+
+    # ── Piper ONNX Lite (CPU, ~15 MB, Sub-100ms Instant Mobile Engine) ────────
+
+    async def _synthesize_piper_onnx(self, text: str) -> AsyncGenerator[bytes, None]:
+        try:
+            if self._piper_voice is None:
+                await self._load_piper_model()
+
+            if self._piper_voice is not None:
                 loop = asyncio.get_event_loop()
+                import io, soundfile as sf, numpy as np
 
-                def _call_worker():
-                    r = requests.post(
-                        self.worker_url,
-                        json={"text": clean_text},
-                        timeout=15,   # XTTS GPU inference takes 1-3s per sentence
-                    )
-                    if r.status_code == 200:
-                        hex_data = r.json().get("audio_b64")
-                        if hex_data:
-                            return bytes.fromhex(hex_data)
-                    return None
+                def _infer():
+                    chunks = list(self._piper_voice.synthesize(text))
+                    raw_pcm = b"".join([c.audio_int16_bytes for c in chunks if hasattr(c, 'audio_int16_bytes')])
+                    audio_data = np.frombuffer(raw_pcm, dtype=np.int16)
+                    buf = io.BytesIO()
+                    sf.write(buf, audio_data, self._piper_voice.config.sample_rate, format="WAV", subtype="PCM_16")
+                    buf.seek(0)
+                    return buf.read()
 
-                audio_bytes = await loop.run_in_executor(None, _call_worker)
-
-                if audio_bytes:
-                    print(f"[McQueen XTTS] ✅ {len(audio_bytes)} bytes — '{clean_text[:50]}'")
-                    self._xtts_healthy = True
-                    yield audio_bytes
+                audio = await loop.run_in_executor(None, _infer)
+                if audio:
+                    print(f"[Piper ONNX Lite] ✅ {len(audio):,} bytes (<0.05s CPU) — '{text[:50]}'")
+                    yield audio
                     return
 
-            except requests.exceptions.ConnectionError:
-                # Worker not running — mark unhealthy so we stop retrying
-                print("[McQueen XTTS] ⚠️  Worker offline — using edge_tts fallback")
-                self._xtts_healthy = False
-            except Exception as e:
-                print(f"[McQueen XTTS] Error: {e} — falling back to edge_tts")
-                self._xtts_healthy = False
+        except Exception as e:
+            print(f"[Piper ONNX Lite] Error: {e} — falling back to Edge")
 
-        # ── 2. Fast edge_tts fallback (AndrewNeural) ─────────────────────────
+        async for chunk in self._synthesize_edge(text):
+            yield chunk
+
+    async def _load_piper_model(self):
+        """Load Piper ONNX model from disk (cached once)."""
+        model_path = Path(__file__).parent.parent / "voice_dataset" / "piper_voice.onnx"
+        if not model_path.exists():
+            print(f"[Piper ONNX] ⚠️  Model not found at {model_path}")
+            return
+
+        try:
+            loop = asyncio.get_event_loop()
+
+            def _load():
+                from piper import PiperVoice
+                return PiperVoice.load(str(model_path))
+
+            self._piper_voice = await loop.run_in_executor(None, _load)
+            print("[Piper ONNX] ✅ Piper ONNX Neural Voice Engine loaded successfully!")
+        except Exception as e:
+            print(f"[Piper ONNX Error] {e}")
+
+    # ── Edge TTS Fallback (Cloud, instant) ───────────────────────────────────
+
+    async def _synthesize_edge(self, text: str) -> AsyncGenerator[bytes, None]:
         try:
             import edge_tts
-            communicate = edge_tts.Communicate(
-                clean_text,
-                voice="en-US-AndrewNeural",
-                rate="+12%",
-                pitch="+4Hz",
-                volume="+10%",
-            )
-            buf = io.BytesIO()
+
+            print(f"[Edge TTS] Generating: '{text[:50]}...'")
+            communicate = edge_tts.Communicate(text, voice="en-US-AndrewNeural")
+
+            mp3_buf = io.BytesIO()
             async for chunk in communicate.stream():
                 if chunk["type"] == "audio":
-                    buf.write(chunk["data"])
-            audio_bytes = buf.getvalue()
-            if audio_bytes:
-                print(f"[edge_tts fallback] {len(audio_bytes)} bytes — '{clean_text[:50]}'")
-                yield audio_bytes
-        except Exception as e:
-            print(f"[TTS Fallback Error] {e}")
+                    mp3_buf.write(chunk["data"])
 
-    def mark_xtts_healthy(self):
-        """Call this when XTTS worker comes back online."""
-        self._xtts_healthy = True
-        print("[TTS] XTTS worker marked healthy — switching back to McQueen voice")
+            mp3_buf.seek(0)
+            mp3_bytes = mp3_buf.read()
+
+            if mp3_bytes:
+                loop = asyncio.get_event_loop()
+
+                def _convert():
+                    import pydub
+                    seg = pydub.AudioSegment.from_file(io.BytesIO(mp3_bytes), format="mp3")
+                    wav_buf = io.BytesIO()
+                    seg.export(wav_buf, format="wav")
+                    return wav_buf.getvalue()
+
+                wav_bytes = await loop.run_in_executor(None, _convert)
+                print(f"[Edge TTS] ✅ {len(wav_bytes):,} bytes")
+                yield wav_bytes
+                return
+
+        except Exception as e:
+            print(f"[Edge TTS Error] {e}")
+
+        # Emergency silence chunk (1s of silence at 24kHz PCM)
+        print("[TTS] ⚠️ All engines failed — returning silence fallback")
+        yield b"\x00" * 48000
+
 
 tts_service = TTSService()

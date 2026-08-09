@@ -19,7 +19,35 @@ import {
   Smartphone,
   Settings,
   X,
+  Mic,
 } from 'lucide-react';
+
+const VOICE_OPTIONS = [
+  {
+    id: 'xtts_original',
+    name: '⚡ McQueen Original',
+    description: 'Full GPU quality — Owen Wilson accurate',
+    badge: '5.6 GB',
+    badgeColor: 'text-amber-400',
+    stars: '★★★★★',
+  },
+  {
+    id: 'vits_lite',
+    name: '🏎️ McQueen Lite',
+    description: 'Lightweight — mobile CPU compatible',
+    badge: '~35 MB',
+    badgeColor: 'text-emerald-400',
+    stars: '★★★☆☆',
+  },
+  {
+    id: 'edge_neural',
+    name: '🎤 McQueen Edge',
+    description: 'Neural cloud voice — instant, no GPU',
+    badge: 'Cloud',
+    badgeColor: 'text-sky-400',
+    stars: '★★☆☆☆',
+  },
+];
 
 interface ControlPanelProps {
   currentEmotion: EmotionalState;
@@ -33,6 +61,8 @@ interface ControlPanelProps {
   onTogglePhoneFrame: () => void;
   customPupilScale: number;
   onChangePupilScale: (val: number) => void;
+  activeVoice: string;
+  onVoiceChange: (voiceId: string) => void;
 }
 
 const EMOTION_ICONS: Record<EmotionalState, React.ReactNode> = {
@@ -64,6 +94,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   onTogglePhoneFrame,
   customPupilScale,
   onChangePupilScale,
+  activeVoice,
+  onVoiceChange,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -142,6 +174,38 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                       <span className="mt-1 capitalize truncate w-full text-center">
                         {EMOTIONS[stateKey].label}
                       </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Voice Selection */}
+            <div className="pt-2 border-t border-white/10">
+              <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 mb-2">
+                <Mic className="w-3.5 h-3.5 text-red-400" /> Voice Model
+              </label>
+              <div className="space-y-1.5">
+                {VOICE_OPTIONS.map((voice) => {
+                  const isActive = activeVoice === voice.id;
+                  return (
+                    <button
+                      key={voice.id}
+                      onClick={() => onVoiceChange(voice.id)}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border text-left transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-gradient-to-r from-red-900/60 to-red-800/40 border-red-500/60 text-white shadow-md'
+                          : 'bg-white/5 border-white/10 hover:bg-white/10 text-slate-300'
+                      }`}
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-xs font-semibold">{voice.name}</span>
+                        <span className="text-[10px] text-slate-400 mt-0.5">{voice.description}</span>
+                      </div>
+                      <div className="flex flex-col items-end ml-2 shrink-0">
+                        <span className={`text-[10px] font-mono ${voice.badgeColor}`}>{voice.badge}</span>
+                        <span className="text-[10px] text-amber-300/70 mt-0.5">{voice.stars}</span>
+                      </div>
                     </button>
                   );
                 })}

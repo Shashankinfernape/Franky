@@ -102,7 +102,7 @@ export function useAIWebSocket({
 
     const connect = () => {
       try {
-        ws = new WebSocket('ws://localhost:5050/ws/emiot');
+        ws = new WebSocket('ws://localhost:8008/ws/emiot');
         wsRef.current = ws;
 
         ws.onopen = () => {
@@ -188,13 +188,9 @@ export function useAIWebSocket({
   const sendSpeechToAI = useCallback(
     (userText: string) => {
       resetAudio();
-
-      // Resume AudioContext HERE — inside a user gesture (button click / form submit)
-      // This is required by browsers to allow audio playback
-      if (audioContextRef.current?.state === 'suspended') {
-        audioContextRef.current.resume().catch(console.warn);
+      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume().catch(() => {});
       }
-
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send(JSON.stringify({ type: 'user_speech', text: userText }));
         return true;
@@ -204,5 +200,14 @@ export function useAIWebSocket({
     [resetAudio]
   );
 
-  return { isConnected, sendSpeechToAI };
+  // Send any raw JSON message to backend (e.g. set_voice, get_voices)
+  const sendRawMessage = useCallback((payload: Record<string, unknown>) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(payload));
+      return true;
+    }
+    return false;
+  }, []);
+
+  return { isConnected, sendSpeechToAI, sendRawMessage };
 }

@@ -9,12 +9,10 @@ import { useBlinkSystem } from '../hooks/useBlinkSystem';
 import { useAIWebSocket } from '../hooks/useAIWebSocket';
 
 const McQueenAIResponses: Record<string, string> = {
-  'Ka-chow! Are you ready to race?':
-    "Ka-chow! You bet I'm ready! Lightning McQueen is always first off the starting line!",
+  'Are you ready to race?':
+    "You bet I'm ready! Lightning McQueen is always first off the starting line!",
   'Float like a Cadillac, sting like a Beemer!':
     "That's Guido and Luigi's favorite phrase! Float like a Cadillac, sting like a Beemer!",
-  'I am speed.':
-    "I am speed. One winner, forty losers. I eat losers for breakfast!",
   'Turn right to go left!':
     "Doc Hudson taught me that trick on the dirt track! Turn right to go left!",
 };
@@ -25,6 +23,7 @@ export const FaceScreen: React.FC = () => {
   const [isFaceTracking, setIsFaceTracking] = useState<boolean>(true);
   const [enableMicroSaccades, setEnableMicroSaccades] = useState<boolean>(true);
   const [customPupilScale, setCustomPupilScale] = useState<number>(1.0);
+  const [activeVoice, setActiveVoice] = useState<string>('xtts_original');
 
   const [isReceiving, setIsReceiving] = useState(false);
   const [receivedWords, setReceivedWords] = useState<string[]>([]);
@@ -73,13 +72,19 @@ export const FaceScreen: React.FC = () => {
     }, 1500);
   }, []);
 
-  const { isConnected: isAIConnected, sendSpeechToAI } = useAIWebSocket({
+  const { isConnected: isAIConnected, sendSpeechToAI, sendRawMessage } = useAIWebSocket({
     onEmotionChange: handleEmotionChange,
     onTextChunk: handleTextChunk,
     onStreamEnd: handleStreamEnd,
     onWordSync: (wordIdx: number) => setCurrentWordIndex(wordIdx),
     totalWordsRef,
   });
+
+  // Voice selection — send set_voice to backend
+  const handleVoiceChange = useCallback((voiceId: string) => {
+    setActiveVoice(voiceId);
+    sendRawMessage({ type: 'set_voice', voice_id: voiceId });
+  }, [sendRawMessage]);
 
   const streamLocalFallback = useCallback((fullText: string) => {
     const words = fullText.split(' ');
@@ -163,6 +168,8 @@ export const FaceScreen: React.FC = () => {
         onTogglePhoneFrame={() => setShowPhoneFrame(!showPhoneFrame)}
         customPupilScale={customPupilScale}
         onChangePupilScale={setCustomPupilScale}
+        activeVoice={activeVoice}
+        onVoiceChange={handleVoiceChange}
       />
 
       {/* AI connection badge */}

@@ -38,29 +38,24 @@ export const MessageBar: React.FC<MessageBarProps> = ({
           {/* Word-by-word blur reveal */}
           <p className="flex-1 text-sm font-medium leading-relaxed tracking-wide select-none">
             {receivedWords.map((word, idx) => {
-              const revealed = idx <= currentWordIndex;
-              const isActive = idx === currentWordIndex;
+              const isPast = currentWordIndex >= 0 && idx < currentWordIndex;
+              const isActive = currentWordIndex >= 0 && idx === currentWordIndex;
 
-              // Words ahead of playhead: completely hidden (blurred + transparent)
-              // Current word: bright cyan highlight
-              // Past words: fully white/visible
               return (
                 <span
                   key={idx}
-                  className="inline-block mr-[0.3em] transition-all"
+                  className="inline-block mr-[0.3em] transition-all duration-200"
                   style={{
-                    transitionDuration: revealed ? '180ms' : '0ms',
-                    transitionTimingFunction: 'ease-out',
-                    // Blur state
-                    filter: revealed ? 'blur(0px)' : 'blur(8px)',
-                    // Opacity
-                    opacity: revealed ? 1 : 0,
-                    // Slight upward pop when revealed
-                    transform: revealed ? 'translateY(0px)' : 'translateY(4px)',
-                    // Colour: active word = cyan, past = white
-                    color: isActive ? '#67e8f9' : 'rgba(248,250,252,0.92)',
+                    filter: (isPast || isActive) ? 'blur(0px)' : 'blur(8px)',
+                    opacity: (isPast || isActive) ? 1 : 0,
+                    transform: isActive ? 'scale(1.08) translateY(0)' : 'translateY(0)',
+                    color: isActive
+                      ? '#67e8f9'
+                      : isPast
+                      ? 'rgba(248,250,252,0.95)'
+                      : 'rgba(248,250,252,0.6)',
                     fontWeight: isActive ? 700 : 500,
-                    textShadow: isActive ? '0 0 12px rgba(103,232,249,0.55)' : 'none',
+                    textShadow: isActive ? '0 0 12px rgba(103,232,249,0.7)' : 'none',
                   }}
                 >
                   {word}

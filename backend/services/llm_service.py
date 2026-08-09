@@ -3,24 +3,37 @@ import re
 import asyncio
 import json
 import requests
+from pathlib import Path
 from typing import AsyncGenerator, Tuple, Dict, Any
 
-# Try loading .env file if python-dotenv is present
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+# Explicitly load backend/.env file
+ENV_PATH = Path(__file__).parent.parent / ".env"
+if ENV_PATH.exists():
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(dotenv_path=ENV_PATH)
+    except ImportError:
+        # Fallback manual env file parser if dotenv isn't installed
+        with open(ENV_PATH, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    os.environ[k.strip()] = v.strip()
 
 class LLMService:
     """
     LLM response generator powered by Groq API (Llama 3.3 70B Versatile).
-    Strict direct answers without any roleplay or filler dialogue.
+    Answers user questions directly in character as Lightning McQueen.
     """
     def __init__(self):
-        self.groq_api_key = os.getenv("GROQ_API_KEY", "")
+        self.groq_api_key = os.getenv("GROQ_API_KEY", "").strip()
         self.groq_url = "https://api.groq.com/openai/v1/chat/completions"
         self.model = "llama-3.3-70b-versatile"
+        if self.groq_api_key:
+            print(f"[LLMService] [OK] Groq API key loaded ({self.groq_api_key[:8]}...)")
+        else:
+            print("[LLMService] [WARN] Groq API key missing!")
 
     async def generate_response_stream(
         self,
@@ -30,7 +43,8 @@ class LLMService:
         """
         Yields tuples of (emotion_tag, token_chunk).
         """
-        api_key = self.groq_api_key or os.getenv("GROQ_API_KEY", "")
+        api_key = self.groq_api_key or os.getenv("GROQ_API_KEY", "").strip()
+
         if api_key:
             try:
                 system_prompt = self._build_system_prompt(personality_state)
@@ -40,8 +54,8 @@ class LLMService:
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_text}
                     ],
-                    "temperature": 0.3,
-                    "max_tokens": 100
+                    "temperature": 0.5,
+                    "max_tokens": 120
                 }
                 headers = {
                     "Authorization": f"Bearer {api_key}",
@@ -57,22 +71,19 @@ class LLMService:
                 if resp.status_code == 200:
                     data = resp.json()
                     full_text = data['choices'][0]['message']['content']
-                    
+
                     # Extract emotion tag
                     emotion_tag, clean_text = self._extract_emotion_tag(full_text)
-                    
+
                     # Normalize curly quotes and smart punctuation → plain ASCII
                     clean_text = (clean_text
-                        .replace('\u2018', "'").replace('\u2019', "'")   # '' → '
-                        .replace('\u201c', '"').replace('\u201d', '"')   # "" → "
-                        .replace('\u2013', '-').replace('\u2014', '--')  # – — → -
-                        .replace('\u2026', '...')                        # … → ...
+                        .replace('\u2018', "'").replace('\u2019', "'")
+                        .replace('\u201c', '"').replace('\u201d', '"')
+                        .replace('\u2013', '-').replace('\u2014', '--')
+                        .replace('\u2026', '...')
                     )
 
-                    # Scrub any residual car roleplay fluff if generated
-                    clean_text = re.sub(r"(?i)\b(i'm revving to go|vroom|full speed ahead|circuits buzzing|let's get this adventure started)\b,?\s*", "", clean_text).strip()
-
-                    print(f"[Groq LLM Direct Output] Emotion: {emotion_tag} | Text: '{clean_text}'")
+                    print(f"[Groq LLM Output] Emotion: {emotion_tag} | Response: '{clean_text}'")
 
                     yield (emotion_tag, "")
                     words = clean_text.split(" ")
@@ -84,17 +95,27 @@ class LLMService:
                 else:
                     print(f"[Groq API Error Status {resp.status_code}] {resp.text}")
             except Exception as e:
-                print(f"[Groq LLM Exception] {e} -> Falling back to direct response")
+                print(f"[Groq LLM Exception] {e}")
 
-        # Fallback
-        yield ("excited", user_text)
+        # Intelligent McQueen Fallback (never echo user text!)
+        fallback_reply = f"Lightning McQueen is ready. You asked about '{user_text}'."
+        print(f"[LLM Fallback Output] {fallback_reply}")
+        yield ("excited", "")
+        words = fallback_reply.split(" ")
+        for i, word in enumerate(words):
+            chunk = word + (" " if i < len(words) - 1 else "")
+            await asyncio.sleep(0.02)
+            yield ("excited", chunk)
 
     def _build_system_prompt(self, personality: Dict[str, Any]) -> str:
-        return """You are a helpful, intelligent, direct AI assistant named Emiot.
+        return """You are Lightning McQueen, the legendary #95 Piston Cup race car.
 CRITICAL INSTRUCTIONS:
-- Answer the user's question directly, clearly, and concisely in 1-2 sentences.
-- NEVER use race car roleplay phrases, car sounds, or filler dialogue (e.g. NEVER say "I'm revving to go", "full speed ahead", "vroom", "adventure started", or "circuits buzzing").
+- Respond naturally as Lightning McQueen to whatever the user says.
+- Be confident, friendly, and enthusiastic.
+- DO NOT use catchphrases like "Ka-chow!" or "I am speed". Speak in clear, natural conversational sentences without repetitive slogans.
+- Answer in 1-2 concise sentences.
 - You MUST start your response with an emotion tag from: [<emo:excited>, <emo:curious>, <emo:confused>, <emo:happy>, <emo:sad>, <emo:sleepy>, <emo:surprised>, <emo:love>, <emo:angry>].
+Example: <emo:excited> Turn right to go left, that is the secret on the dirt track!
 """
 
     def _extract_emotion_tag(self, text: str) -> Tuple[str, str]:
