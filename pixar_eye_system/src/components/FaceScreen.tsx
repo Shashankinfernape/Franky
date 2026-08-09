@@ -75,11 +75,32 @@ export const FaceScreen: React.FC = () => {
   }, []);
 
   const handleStreamEnd = useCallback(() => {
-    setTimeout(() => {
-      setIsReceiving(false);
-      setCurrentEmotionState('happy');
-    }, 1500);
-  }, []);
+    if (activeVoice === 'vits_lite' && isTTSReady) {
+      speakText(streamedTextRef.current, 
+        () => {
+          let idx = -1;
+          const words = streamedTextRef.current.trim().split(/\s+/);
+          const interval = setInterval(() => {
+            idx++;
+            if (idx < words.length) {
+              setCurrentWordIndex(idx);
+            } else {
+              clearInterval(interval);
+            }
+          }, 200);
+        },
+        () => {
+          setIsReceiving(false);
+          setCurrentEmotionState('happy');
+        }
+      );
+    } else {
+      setTimeout(() => {
+        setIsReceiving(false);
+        setCurrentEmotionState('happy');
+      }, 1500);
+    }
+  }, [activeVoice, isTTSReady, speakText]);
 
   const { isConnected: isAIConnected, sendSpeechToAI, sendRawMessage } = useAIWebSocket({
     onEmotionChange: handleEmotionChange,
@@ -87,6 +108,7 @@ export const FaceScreen: React.FC = () => {
     onStreamEnd: handleStreamEnd,
     onWordSync: (wordIdx: number) => setCurrentWordIndex(wordIdx),
     totalWordsRef,
+    shouldPlayBackendAudio: activeVoice !== 'vits_lite',
   });
 
   // Voice selection — send set_voice to backend

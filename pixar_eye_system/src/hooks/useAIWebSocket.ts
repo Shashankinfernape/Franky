@@ -7,6 +7,7 @@ interface AIWebSocketOptions {
   onStreamEnd: () => void;
   onWordSync: (wordIndex: number) => void;
   totalWordsRef: React.MutableRefObject<number>;
+  shouldPlayBackendAudio: boolean;
 }
 
 export function useAIWebSocket({
@@ -15,6 +16,7 @@ export function useAIWebSocket({
   onStreamEnd,
   onWordSync,
   totalWordsRef,
+  shouldPlayBackendAudio
 }: AIWebSocketOptions) {
   const [isConnected, setIsConnected] = useState(false);
   
@@ -23,8 +25,8 @@ export function useAIWebSocket({
   const audioContextRef = useRef<AudioContext | null>(null);
 
   // Stable callback refs to avoid effect re-subscriptions
-  const callbacksRef = useRef({ onEmotionChange, onTextChunk, onStreamEnd, onWordSync });
-  callbacksRef.current = { onEmotionChange, onTextChunk, onStreamEnd, onWordSync };
+  const callbacksRef = useRef({ onEmotionChange, onTextChunk, onStreamEnd, onWordSync, shouldPlayBackendAudio });
+  callbacksRef.current = { onEmotionChange, onTextChunk, onStreamEnd, onWordSync, shouldPlayBackendAudio };
 
   // Audio scheduling & animation refs
   const nextAudioTimeRef = useRef<number>(0);
@@ -134,6 +136,8 @@ export function useAIWebSocket({
             } else if (msgType === 'stream_end') {
               callbacksRef.current.onStreamEnd();
             } else if (msgType === 'audio_chunk' && data.audio_b64) {
+              if (!callbacksRef.current.shouldPlayBackendAudio) return;
+              
               const ctx = audioContextRef.current;
               if (!ctx) return;
 
