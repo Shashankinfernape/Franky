@@ -102,7 +102,7 @@ export function useAIWebSocket({
 
     const connect = () => {
       try {
-        ws = new WebSocket('ws://localhost:8008/ws/emiot');
+        ws = new WebSocket('wss://emiot-backend.onrender.com/ws/emiot');
         wsRef.current = ws;
 
         ws.onopen = () => {
