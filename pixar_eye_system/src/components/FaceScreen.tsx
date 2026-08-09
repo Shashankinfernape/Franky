@@ -39,7 +39,7 @@ export const FaceScreen: React.FC = () => {
     pupilScale: emotionBase.pupilScale * customPupilScale,
   };
 
-  const { gazeX, gazeY, parallaxX, parallaxY, setGaze } = useEyeMotion({
+  const { gazeX, gazeY, parallaxX, parallaxY, setGaze, releaseGaze } = useEyeMotion({
     enableMicroSaccades,
     enableBreathing: true,
     enableIdleLookAround: !isFaceTracking && !isReceiving,
@@ -135,10 +135,19 @@ export const FaceScreen: React.FC = () => {
     [isFaceTracking, setGaze]
   );
 
+  const handlePointerUp = useCallback(() => {
+    if (isFaceTracking) {
+      releaseGaze();
+    }
+  }, [isFaceTracking, releaseGaze]);
+
   return (
     <div
       ref={containerRef}
       onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
+      onPointerCancel={handlePointerUp}
       className="relative w-screen h-screen overflow-hidden select-none touch-none"
     >
       <Windshield

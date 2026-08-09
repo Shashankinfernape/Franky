@@ -15,6 +15,7 @@ export interface EyeMotionOutput {
   parallaxX: MotionValue<number>;
   parallaxY: MotionValue<number>;
   setGaze: (point: GazePoint) => void;
+  releaseGaze: () => void;
 }
 
 export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
@@ -107,22 +108,30 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
       const finalTargetX = targetRef.current.x + microOffsetRef.current.x + breathingX;
       const finalTargetY = targetRef.current.y + microOffsetRef.current.y + breathingY;
 
-      // Spring dynamics parameters (Snappy Pixar eye darts)
-      const stiffness = 380;
-      const damping = 28;
-      const dt = 1 / 60;
+      if (isUserInteractingRef.current) {
+        // BGMI-like instant 1:1 tracking with zero physics drag
+        gazeRef.current.x = finalTargetX;
+        gazeRef.current.y = finalTargetY;
+        velocityRef.current.x = 0;
+        velocityRef.current.y = 0;
+      } else {
+        // Spring dynamics parameters (Snappy Pixar eye darts)
+        const stiffness = 380;
+        const damping = 28;
+        const dt = 1 / 60;
 
-      // Spring force
-      const forceX = (finalTargetX - gazeRef.current.x) * stiffness;
-      const forceY = (finalTargetY - gazeRef.current.y) * stiffness;
+        // Spring force
+        const forceX = (finalTargetX - gazeRef.current.x) * stiffness;
+        const forceY = (finalTargetY - gazeRef.current.y) * stiffness;
 
-      // Update velocity with damping
-      velocityRef.current.x = (velocityRef.current.x + forceX * dt) * (1 - damping * dt);
-      velocityRef.current.y = (velocityRef.current.y + forceY * dt) * (1 - damping * dt);
+        // Update velocity with damping
+        velocityRef.current.x = (velocityRef.current.x + forceX * dt) * (1 - damping * dt);
+        velocityRef.current.y = (velocityRef.current.y + forceY * dt) * (1 - damping * dt);
 
-      // Update position
-      gazeRef.current.x += velocityRef.current.x * dt;
-      gazeRef.current.y += velocityRef.current.y * dt;
+        // Update position
+        gazeRef.current.x += velocityRef.current.x * dt;
+        gazeRef.current.y += velocityRef.current.y * dt;
+      }
 
       // Glass Parallax Highlight calculation: moves OPPOSITE to gaze direction
       const pX = -gazeRef.current.x * 12;
@@ -156,11 +165,17 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
     lastUserInteractionTime.current = Date.now();
   };
 
+  const releaseGaze = () => {
+    isUserInteractingRef.current = false;
+    lastUserInteractionTime.current = Date.now();
+  };
+
   return {
     gazeX,
     gazeY,
     parallaxX,
     parallaxY,
     setGaze,
+    releaseGaze,
   };
 }
