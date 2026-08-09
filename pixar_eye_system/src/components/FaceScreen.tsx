@@ -8,6 +8,8 @@ import { useEyeMotion } from '../hooks/useEyeMotion';
 import { useBlinkSystem } from '../hooks/useBlinkSystem';
 import { useAIWebSocket } from '../hooks/useAIWebSocket';
 
+import { useLocalTTS } from '../hooks/useLocalTTS';
+
 const McQueenAIResponses: Record<string, string> = {
   'Are you ready to race?':
     "You bet I'm ready! Lightning McQueen is always first off the starting line!",
@@ -51,6 +53,13 @@ export const FaceScreen: React.FC = () => {
     frequencyMultiplier: emotionConfig.blinkFrequencyMultiplier,
   });
 
+  // LOCAL TTS ENGINE!
+  const { isReady: isTTSReady, progressInfo: ttsProgressInfo, initLocalTTS, speakText } = useLocalTTS();
+
+  React.useEffect(() => {
+    initLocalTTS();
+  }, [initLocalTTS]);
+
   const handleEmotionChange = useCallback((emotion: EmotionalState) => {
     setCurrentEmotionState(emotion);
   }, []);
@@ -82,17 +91,21 @@ export const FaceScreen: React.FC = () => {
 
   // Voice selection — send set_voice to backend
   const handleVoiceChange = useCallback((voiceId: string) => {
+    if (voiceId === 'xtts_original') {
+      alert("WARNING: XTTS Original (5.6GB) requires a PC connection. Running in fallback mode.");
+    }
     setActiveVoice(voiceId);
     sendRawMessage({ type: 'set_voice', voice_id: voiceId });
   }, [sendRawMessage]);
 
-  const streamLocalFallback = useCallback((fullText: string) => {
+  const streamLocalFallback = useCallback((fullText: string, tryRealAudio: boolean = false) => {
     const words = fullText.split(' ');
     setReceivedWords(words);
     setCurrentWordIndex(-1);
     setIsReceiving(true);
     setCurrentEmotionState('thinking');
-    setTimeout(() => {
+
+    const animateWords = () => {
       let idx = -1;
       const interval = setInterval(() => {
         idx++;
@@ -101,26 +114,46 @@ export const FaceScreen: React.FC = () => {
           setCurrentEmotionState(idx % 2 === 0 ? 'talking' : 'excited');
         } else {
           clearInterval(interval);
-          setTimeout(() => {
-            setIsReceiving(false);
-            setCurrentEmotionState('happy');
-          }, 1200);
+          if (!tryRealAudio || activeVoice !== 'vits_lite') {
+            setTimeout(() => {
+              setIsReceiving(false);
+              setCurrentEmotionState('happy');
+            }, 1200);
+          }
         }
-      }, 160);
-    }, 400);
-  }, []);
+      }, 200);
+    };
+
+    if (tryRealAudio && activeVoice === 'vits_lite' && isTTSReady) {
+      speakText(fullText, 
+        () => {
+          animateWords(); // onStart
+        }, 
+        () => {
+          // onEnd
+          setIsReceiving(false);
+          setCurrentEmotionState('happy');
+        }
+      );
+    } else {
+      setTimeout(animateWords, 400);
+    }
+  }, [activeVoice, isTTSReady, speakText]);
 
   const handleSendMessage = (userText: string) => {
     streamedTextRef.current = '';
     setReceivedWords([]);
     setCurrentWordIndex(-1);
     setCurrentEmotionState('thinking');
+    
+    // We completely bypass WebSocket for TTS generation now and run locally!
+    // If backend is down, we use the matched presets.
     const sent = sendSpeechToAI(userText);
     if (!sent) {
       const matched =
         McQueenAIResponses[userText] ||
         `Ka-chow! You said "${userText}"! Lightning McQueen is powered up and ready!`;
-      streamLocalFallback(matched);
+      streamLocalFallback(matched, true);
     }
   };
 
@@ -186,9 +219,18 @@ export const FaceScreen: React.FC = () => {
       />
 
       {/* AI connection badge */}
-      <div className="fixed top-4 left-4 z-50 flex items-center gap-2 px-3 py-1 bg-slate-950/70 backdrop-blur-md rounded-full border border-white/10 text-[11px] text-slate-300">
-        <span className={`w-2 h-2 rounded-full ${isAIConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-        <span>{isAIConnected ? 'Emiot AI Active' : 'AI Offline (Fallback)'}</span>
+      <div className="fixed top-4 left-4 z-50 flex flex-col gap-2">
+        <div className="flex items-center gap-2 px-3 py-1 bg-slate-950/70 backdrop-blur-md rounded-full border border-white/10 text-[11px] text-slate-300">
+          <span className={`w-2 h-2 rounded-full ${isAIConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+          <span>{isAIConnected ? 'Emiot AI Active' : 'AI Offline (Fallback)'}</span>
+        </div>
+        
+        {ttsProgressInfo && (
+          <div className="flex items-center gap-2 px-3 py-1 bg-blue-950/70 backdrop-blur-md rounded-full border border-blue-500/30 text-[11px] text-blue-200">
+            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+            <span>{ttsProgressInfo}</span>
+          </div>
+        )}
       </div>
     </div>
   );
