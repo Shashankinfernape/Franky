@@ -4,12 +4,15 @@ import { Reflection } from './Reflection';
 import { Catchlight } from './Catchlight';
 import type { GazePoint } from '../types/eye';
 
+import { MotionValue } from 'framer-motion';
+
 interface IrisProps {
   pupilScale?: number;
-  parallaxOffset: GazePoint;
+  parallaxX: MotionValue<number>;
+  parallaxY: MotionValue<number>;
 }
 
-export const Iris: React.FC<IrisProps> = ({ pupilScale = 1.0, parallaxOffset }) => {
+export const Iris: React.FC<IrisProps> = ({ pupilScale = 1.0, parallaxX, parallaxY }) => {
   return (
     <div
       className="relative rounded-full flex items-center justify-center shadow-[inset_0_4px_16px_rgba(0,0,0,0.5),0_0_8px_rgba(13,27,57,0.4)] overflow-hidden"
@@ -111,9 +114,9 @@ export const Iris: React.FC<IrisProps> = ({ pupilScale = 1.0, parallaxOffset }) 
       {/* Limbal ring */}
       <div className="absolute inset-0 rounded-full border-[3px] border-[#0D1B39]/80 pointer-events-none" style={{ filter: 'blur(0.8px)' }} />
 
-      <Pupil scale={pupilScale} parallaxOffset={parallaxOffset} />
-      <Reflection parallaxOffset={parallaxOffset} />
-      <Catchlight parallaxOffset={parallaxOffset} />
+      <Pupil scale={pupilScale} parallaxX={parallaxX} parallaxY={parallaxY} />
+      <Reflection parallaxX={parallaxX} parallaxY={parallaxY} />
+      <Catchlight parallaxX={parallaxX} parallaxY={parallaxY} />
     </div>
   );
 };

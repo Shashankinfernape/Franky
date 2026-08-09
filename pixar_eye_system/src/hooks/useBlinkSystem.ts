@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useMotionValue, MotionValue } from 'framer-motion';
 
 export type BlinkType = 'normal' | 'double' | 'sleepy' | 'half';
 
@@ -7,15 +8,24 @@ interface UseBlinkSystemOptions {
   frequencyMultiplier?: number;
 }
 
-export function useBlinkSystem(options: UseBlinkSystemOptions = {}) {
+export interface BlinkSystemOutput {
+  isBlinking: boolean;
+  blinkProgress: MotionValue<number>;
+  blinkType: BlinkType;
+  triggerBlink: (overrideType?: BlinkType) => void;
+}
+
+export function useBlinkSystem(options: UseBlinkSystemOptions = {}): BlinkSystemOutput {
   const { enabled = true, frequencyMultiplier = 1.0 } = options;
   const [isBlinking, setIsBlinking] = useState(false);
-  const [blinkProgress, setBlinkProgress] = useState(0); // 0 (open) to 1 (closed)
+  
+  // High-performance motion value for the blink animation
+  const blinkProgress = useMotionValue(0); 
+  
   const [blinkType, setBlinkType] = useState<BlinkType>('normal');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const triggerBlink = useCallback((overrideType?: BlinkType) => {
-    // Pick blink type based on probability if not overridden
     let chosenType: BlinkType = overrideType || 'normal';
     if (!overrideType) {
       const rand = Math.random();
@@ -27,15 +37,12 @@ export function useBlinkSystem(options: UseBlinkSystemOptions = {}) {
     setBlinkType(chosenType);
     setIsBlinking(true);
 
-    // Duration mapping
-    let duration = 150; // default 120-180ms
+    let duration = 150;
     if (chosenType === 'sleepy') duration = 380;
     else if (chosenType === 'half') duration = 130;
     else duration = Math.floor(120 + Math.random() * 60);
 
     const targetCoverage = chosenType === 'half' ? 0.55 : 1.0;
-
-    // Animate blink down and up smoothly
     const startTime = performance.now();
 
     const animateBlink = (now: number) => {
@@ -43,20 +50,17 @@ export function useBlinkSystem(options: UseBlinkSystemOptions = {}) {
       const halfDuration = duration / 2;
 
       if (elapsed < halfDuration) {
-        // Closing phase
         const p = elapsed / halfDuration;
-        setBlinkProgress(p * targetCoverage);
+        blinkProgress.set(p * targetCoverage);
         requestAnimationFrame(animateBlink);
       } else if (elapsed < duration) {
-        // Opening phase
         const p = 1 - (elapsed - halfDuration) / halfDuration;
-        setBlinkProgress(p * targetCoverage);
+        blinkProgress.set(p * targetCoverage);
         requestAnimationFrame(animateBlink);
       } else {
-        setBlinkProgress(0);
+        blinkProgress.set(0);
         setIsBlinking(false);
 
-        // Handle double blink
         if (chosenType === 'double') {
           setTimeout(() => {
             setIsBlinking(true);
@@ -65,13 +69,13 @@ export function useBlinkSystem(options: UseBlinkSystemOptions = {}) {
             const animateDouble = (dNow: number) => {
               const dElapsed = dNow - doubleStart;
               if (dElapsed < 75) {
-                setBlinkProgress(dElapsed / 75);
+                blinkProgress.set(dElapsed / 75);
                 requestAnimationFrame(animateDouble);
               } else if (dElapsed < 150) {
-                setBlinkProgress(1 - (dElapsed - 75) / 75);
+                blinkProgress.set(1 - (dElapsed - 75) / 75);
                 requestAnimationFrame(animateDouble);
               } else {
-                setBlinkProgress(0);
+                blinkProgress.set(0);
                 setIsBlinking(false);
               }
             };
@@ -82,13 +86,12 @@ export function useBlinkSystem(options: UseBlinkSystemOptions = {}) {
     };
 
     requestAnimationFrame(animateBlink);
-  }, []);
+  }, [blinkProgress]);
 
   useEffect(() => {
     if (!enabled) return;
 
     const scheduleNextBlink = () => {
-      // Random interval between 3.0s and 8.0s, modified by frequency multiplier
       const baseInterval = (3000 + Math.random() * 5000) / frequencyMultiplier;
 
       timerRef.current = setTimeout(() => {

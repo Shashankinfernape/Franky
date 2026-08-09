@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useMotionValue, MotionValue } from 'framer-motion';
 import type { GazePoint } from '../types/eye';
 
 interface EyeMotionOptions {
@@ -8,7 +9,16 @@ interface EyeMotionOptions {
   saccadeSpeedMultiplier?: number;
 }
 
-export function useEyeMotion(options: EyeMotionOptions = {}) {
+export interface EyeMotionOutput {
+  gazeX: MotionValue<number>;
+  gazeY: MotionValue<number>;
+  parallaxX: MotionValue<number>;
+  parallaxY: MotionValue<number>;
+  setGaze: (point: GazePoint) => void;
+  isUserInteracting: boolean;
+}
+
+export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
   const {
     enableMicroSaccades = true,
     enableBreathing = true,
@@ -20,11 +30,11 @@ export function useEyeMotion(options: EyeMotionOptions = {}) {
   const [targetGaze, setTargetGaze] = useState<GazePoint>({ x: 0, y: 0 });
   const [isUserInteracting, setIsUserInteracting] = useState(false);
 
-  // Computed smooth gaze after spring physics & micro motions
-  const [currentGaze, setCurrentGaze] = useState<GazePoint>({ x: 0, y: 0 });
-
-  // Glass Parallax offset (opposite to gaze direction)
-  const [parallaxOffset, setParallaxOffset] = useState<GazePoint>({ x: 0, y: 0 });
+  // Motion values to avoid React re-renders on every frame
+  const gazeX = useMotionValue(0);
+  const gazeY = useMotionValue(0);
+  const parallaxX = useMotionValue(0);
+  const parallaxY = useMotionValue(0);
 
   // Refs for animation physics loop
   const gazeRef = useRef<GazePoint>({ x: 0, y: 0 });
@@ -123,11 +133,14 @@ export function useEyeMotion(options: EyeMotionOptions = {}) {
       gazeRef.current.y += velocityRef.current.y * dt;
 
       // Glass Parallax Highlight calculation: moves OPPOSITE to gaze direction
-      const parallaxX = -gazeRef.current.x * 12;
-      const parallaxY = -gazeRef.current.y * 8;
+      const pX = -gazeRef.current.x * 12;
+      const pY = -gazeRef.current.y * 8;
 
-      setCurrentGaze({ x: gazeRef.current.x, y: gazeRef.current.y });
-      setParallaxOffset({ x: parallaxX, y: parallaxY });
+      // Direct write to MotionValues (Bypasses React DOM diffing!)
+      gazeX.set(gazeRef.current.x);
+      gazeY.set(gazeRef.current.y);
+      parallaxX.set(pX);
+      parallaxY.set(pY);
 
       animFrameId = requestAnimationFrame(updatePhysics);
     };
@@ -137,7 +150,7 @@ export function useEyeMotion(options: EyeMotionOptions = {}) {
     return () => {
       cancelAnimationFrame(animFrameId);
     };
-  }, [enableBreathing]);
+  }, [enableBreathing, gazeX, gazeY, parallaxX, parallaxY]);
 
   // Set user gaze target explicitly (clamped -1 to 1)
   const setGaze = (point: GazePoint) => {
@@ -150,9 +163,10 @@ export function useEyeMotion(options: EyeMotionOptions = {}) {
   };
 
   return {
-    currentGaze,
-    targetGaze,
-    parallaxOffset,
+    gazeX,
+    gazeY,
+    parallaxX,
+    parallaxY,
     setGaze,
     isUserInteracting,
   };

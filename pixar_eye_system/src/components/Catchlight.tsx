@@ -1,24 +1,19 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import type { GazePoint } from '../types/eye';
+import { motion, useTransform, MotionValue } from 'framer-motion';
 
 interface CatchlightProps {
-  parallaxOffset: GazePoint;
+  parallaxX: MotionValue<number>;
+  parallaxY: MotionValue<number>;
 }
 
-export const Catchlight: React.FC<CatchlightProps> = ({ parallaxOffset }) => {
+export const Catchlight: React.FC<CatchlightProps> = ({ parallaxX, parallaxY }) => {
+  const x = useTransform(parallaxX, (val) => val * 0.3);
+  const y = useTransform(parallaxY, (val) => val * 0.3);
+
   return (
     <motion.div
       className="absolute top-[18%] right-[18%] w-[12%] h-[12%] rounded-full bg-white/85 shadow-sm pointer-events-none"
-      animate={{
-        x: parallaxOffset.x * 0.3,
-        y: parallaxOffset.y * 0.3,
-      }}
-      transition={{
-        type: 'spring',
-        stiffness: 140,
-        damping: 18,
-      }}
+      style={{ x, y }}
     />
   );
 };

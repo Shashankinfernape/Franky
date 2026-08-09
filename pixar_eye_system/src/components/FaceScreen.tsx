@@ -39,7 +39,7 @@ export const FaceScreen: React.FC = () => {
     pupilScale: emotionBase.pupilScale * customPupilScale,
   };
 
-  const { currentGaze, parallaxOffset, setGaze } = useEyeMotion({
+  const { gazeX, gazeY, parallaxX, parallaxY, setGaze } = useEyeMotion({
     enableMicroSaccades,
     enableBreathing: true,
     enableIdleLookAround: !isFaceTracking && !isReceiving,
@@ -143,8 +143,10 @@ export const FaceScreen: React.FC = () => {
     >
       <Windshield
         emotion={emotionConfig}
-        currentGaze={currentGaze}
-        parallaxOffset={parallaxOffset}
+        gazeX={gazeX}
+        gazeY={gazeY}
+        parallaxX={parallaxX}
+        parallaxY={parallaxY}
         blinkProgress={blinkProgress}
       />
 

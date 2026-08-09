@@ -1,10 +1,11 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import type { EmotionalState, GazePoint } from '../types/eye';
+import { motion, useTransform, MotionValue } from 'framer-motion';
+import type { EmotionalState } from '../types/eye';
 
 interface UpperLidProps {
-  blinkProgress: number;
-  currentGaze: GazePoint;
+  blinkProgress: MotionValue<number>;
+  gazeX: MotionValue<number>;
+  gazeY: MotionValue<number>;
   emotionState: EmotionalState;
 }
 
@@ -79,33 +80,37 @@ function makeLidFill(bLeft: number, bRight: number, d: number, cx: number): stri
 
 export const UpperLid: React.FC<UpperLidProps> = ({
   blinkProgress,
-  currentGaze,
+  gazeX,
+  gazeY,
   emotionState,
 }) => {
-  const drop    = EMOTION_DROP[emotionState] ?? 0;
-  const dipBase = EMOTION_DIP[emotionState] ?? 15;
+  const skewX = EMOTION_SKEW[emotionState] ?? 0; // Pure emotion skew
   
-  // Massive dynamic tracking of eyeballs
-  const gazeAdjY = currentGaze.y * 65; // Lids follow up/down
-  const gazeAdjX = currentGaze.x * 45; // Lids slant left/right
-  const skewX    = EMOTION_SKEW[emotionState] ?? 0; // Pure emotion skew
-  const cx       = currentGaze.x * 120; // Center notch slides left/right
+  // Transform pipeline calculating perfectly smooth 60fps vector graphics
+  const fillD = useTransform(
+    [blinkProgress, gazeX, gazeY],
+    ([blinkP, gX, gY]: number[]) => {
+      const drop = EMOTION_DROP[emotionState] ?? 0;
+      const dipBase = EMOTION_DIP[emotionState] ?? 15;
+      
+      const gazeAdjY = gY * 65;
+      const gazeAdjX = gX * 45;
+      const cx = gX * 120;
 
-  let bLeft = LID_BASE + drop + gazeAdjY + gazeAdjX;
-  let bRight = LID_BASE + drop + gazeAdjY - gazeAdjX;
+      let bLeft = LID_BASE + drop + gazeAdjY + gazeAdjX;
+      let bRight = LID_BASE + drop + gazeAdjY - gazeAdjX;
 
-  // Mathematically interpolate the blink using the 60fps custom blink engine
-  // This allows half-blinks, sleepy blinks, and double blinks to work perfectly.
-  bLeft = bLeft + (435 - bLeft) * blinkProgress;
-  bRight = bRight + (435 - bRight) * blinkProgress;
+      bLeft = bLeft + (435 - bLeft) * blinkP;
+      bRight = bRight + (435 - bRight) * blinkP;
 
-  bLeft = Math.max(18, Math.min(435, bLeft));
-  bRight = Math.max(18, Math.min(435, bRight));
+      bLeft = Math.max(18, Math.min(435, bLeft));
+      bRight = Math.max(18, Math.min(435, bRight));
 
-  // The center 'M' notch flattens out fully during a blink
-  const dip = dipBase * (1 - blinkProgress);
+      const dip = dipBase * (1 - blinkP);
 
-  const fillD = makeLidFill(bLeft, bRight, dip, cx);
+      return makeLidFill(bLeft, bRight, dip, cx);
+    }
+  );
 
   return (
     <motion.svg
@@ -140,15 +145,11 @@ export const UpperLid: React.FC<UpperLidProps> = ({
         d={fillD}
         fill="url(#lgLid)"
         filter="url(#fLidDrop)"
-        animate={{ d: fillD }}
-        transition={{ type: 'tween', duration: 0 }}
       />
 
       <motion.path
         d={fillD}
         fill="url(#lgSheen)"
-        animate={{ d: fillD }}
-        transition={{ type: 'tween', duration: 0 }}
       />
     </motion.svg>
   );

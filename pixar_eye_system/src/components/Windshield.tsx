@@ -1,19 +1,24 @@
 import React from 'react';
 import { Eye } from './Eye';
 import { UpperLid } from './UpperLid';
+import { MotionValue } from 'framer-motion';
 import type { EmotionConfig, GazePoint } from '../types/eye';
 
 interface WindshieldProps {
   emotion: EmotionConfig;
-  currentGaze: GazePoint;
-  parallaxOffset: GazePoint;
+  gazeX: MotionValue<number>;
+  gazeY: MotionValue<number>;
+  parallaxX: MotionValue<number>;
+  parallaxY: MotionValue<number>;
   blinkProgress: number;
 }
 
 export const Windshield: React.FC<WindshieldProps> = ({
   emotion,
-  currentGaze,
-  parallaxOffset,
+  gazeX,
+  gazeY,
+  parallaxX,
+  parallaxY,
   blinkProgress,
 }) => {
   return (
@@ -104,8 +109,10 @@ export const Windshield: React.FC<WindshieldProps> = ({
           }}
         >
           <Eye
-            currentGaze={currentGaze}
-            parallaxOffset={parallaxOffset}
+            gazeX={gazeX}
+            gazeY={gazeY}
+            parallaxX={parallaxX}
+            parallaxY={parallaxY}
             pupilScale={emotion.pupilScale}
             emotionState={emotion.name}
           />
@@ -121,8 +128,10 @@ export const Windshield: React.FC<WindshieldProps> = ({
           }}
         >
           <Eye
-            currentGaze={currentGaze}
-            parallaxOffset={parallaxOffset}
+            gazeX={gazeX}
+            gazeY={gazeY}
+            parallaxX={parallaxX}
+            parallaxY={parallaxY}
             pupilScale={emotion.pupilScale}
             emotionState={emotion.name}
           />
@@ -130,7 +139,8 @@ export const Windshield: React.FC<WindshieldProps> = ({
 
         <UpperLid
           blinkProgress={blinkProgress}
-          currentGaze={currentGaze}
+          gazeX={gazeX}
+          gazeY={gazeY}
           emotionState={emotion.name}
         />
       </div>
