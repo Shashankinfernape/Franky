@@ -183,7 +183,7 @@ export const FaceScreen: React.FC = () => {
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
       onPointerCancel={handlePointerUp}
-      className="relative w-screen h-screen overflow-hidden select-none touch-none"
+      className="fixed inset-0 w-screen h-[100dvh] overflow-hidden select-none touch-none"
     >
       <Windshield
         emotion={emotionConfig}

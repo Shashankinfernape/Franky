@@ -23,7 +23,7 @@ export const Windshield: React.FC<WindshieldProps> = ({
 }) => {
   return (
     <div
-      className="relative w-screen h-screen select-none overflow-hidden touch-none"
+      className="absolute inset-0 w-full h-full select-none overflow-hidden touch-none"
       style={{
         background: `
           linear-gradient(to bottom,
