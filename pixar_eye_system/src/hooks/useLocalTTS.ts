@@ -14,10 +14,11 @@ function setupFetchInterceptor() {
     
     if (url.includes('huggingface.co') && url.includes('en_US-hfc_female-medium')) {
       // Redirect to our local public folder models!
+      const baseUrl = window.location.origin;
       if (url.endsWith('.json')) {
-        return originalFetch('/voice/piper_voice.onnx.json', init);
+        return originalFetch(`${baseUrl}/voice/piper_voice.onnx.json`, init);
       } else {
-        return originalFetch('/voice/piper_voice.onnx', init);
+        return originalFetch(`${baseUrl}/voice/piper_voice.onnx`, init);
       }
     }
     return originalFetch(input, init);
