@@ -21,3 +21,29 @@ if (fs.existsSync(targetFile)) {
 } else {
   console.warn('Could not find piper-tts-web.js to patch.');
 }
+
+const wasmDir = path.join(__dirname, 'public', 'voice', 'wasm');
+if (!fs.existsSync(wasmDir)) {
+  fs.mkdirSync(wasmDir, { recursive: true });
+}
+
+// Copy piper-wasm files
+const piperBuild = path.join(__dirname, 'node_modules', '@diffusionstudio', 'piper-wasm', 'build');
+if (fs.existsSync(piperBuild)) {
+  fs.readdirSync(piperBuild).forEach(file => {
+    if (file.endsWith('.wasm') || file.endsWith('.data')) {
+      fs.copyFileSync(path.join(piperBuild, file), path.join(wasmDir, file));
+    }
+  });
+}
+
+// Copy onnxruntime-web files
+const onnxDist = path.join(__dirname, 'node_modules', 'onnxruntime-web', 'dist');
+if (fs.existsSync(onnxDist)) {
+  fs.readdirSync(onnxDist).forEach(file => {
+    if (file.endsWith('.wasm')) {
+      fs.copyFileSync(path.join(onnxDist, file), path.join(wasmDir, file));
+    }
+  });
+}
+console.log('Successfully copied WASM files to public/voice/wasm/');

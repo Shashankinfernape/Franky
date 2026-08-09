@@ -48,6 +48,11 @@ export function useLocalTTS() {
       // Pre-warm the TTS session
       await tts.TtsSession.create({
         voiceId: MOCK_VOICE_ID as tts.VoiceId,
+        wasmPaths: {
+          onnxWasm: window.location.origin + '/voice/wasm/',
+          piperData: window.location.origin + '/voice/wasm/',
+          piperWasm: window.location.origin + '/voice/wasm/'
+        },
         progress: (e) => {
           if (e.total) {
             const mbLoaded = (e.loaded / 1024 / 1024).toFixed(1);
