@@ -42,8 +42,8 @@ export const Eye: React.FC<EyeProps> = ({
     <div className="relative flex items-center justify-center pointer-events-none">
       <motion.div
         className="relative flex items-center justify-center"
-        animate={{ x: bX * 22, y: bY * 16 }}
-        transition={{ type: 'spring', stiffness: 155, damping: 19, mass: 0.9 }}
+        animate={{ x: `${bX * 14}vw`, y: `${bY * 5}vw` }}
+        transition={{ type: 'tween', duration: 0 }}
       >
         <Iris pupilScale={pupilScale} parallaxOffset={parallaxOffset} />
       </motion.div>

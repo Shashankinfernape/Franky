@@ -35,7 +35,7 @@ export const Windshield: React.FC<WindshieldProps> = ({
         className="absolute top-0 left-0 overflow-hidden"
         style={{
           width: '100vw',
-          height: 'calc(100vw / 2.3)',
+          height: 'calc(100vw / 3)',
           borderRadius: '0 0 3vw 3vw',
           boxShadow:
             'inset 0 0 0 8px rgba(6,1,1,0.85), ' +
@@ -98,8 +98,8 @@ export const Windshield: React.FC<WindshieldProps> = ({
           className="absolute"
           style={{
             zIndex: 20,
-            left: '38%',
-            top: '50%',
+            left: '35%',
+            top: '68%',
             transform: 'translate(-50%, -50%)',
           }}
         >
@@ -115,8 +115,8 @@ export const Windshield: React.FC<WindshieldProps> = ({
           className="absolute"
           style={{
             zIndex: 20,
-            left: '62%',
-            top: '50%',
+            left: '65%',
+            top: '68%',
             transform: 'translate(-50%, -50%)',
           }}
         >
@@ -138,7 +138,7 @@ export const Windshield: React.FC<WindshieldProps> = ({
       <div
         className="absolute inset-x-0 bottom-0"
         style={{
-          top: 'calc(100vw / 2.3)',
+          top: 'calc(100vw / 3)',
           background: `
             linear-gradient(to bottom,
               #C81818 0%,
@@ -153,7 +153,7 @@ export const Windshield: React.FC<WindshieldProps> = ({
       <div
         className="absolute pointer-events-none"
         style={{
-          top: 'calc(100vw / 2.3 + 1.5vw)',
+          top: 'calc(100vw / 3 + 1.5vw)',
           left: '6%', right: '6%',
           height: '1.8vw',
           background:

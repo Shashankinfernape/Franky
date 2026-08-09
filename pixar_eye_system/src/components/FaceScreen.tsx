@@ -47,7 +47,7 @@ export const FaceScreen: React.FC = () => {
   });
 
   const { blinkProgress, triggerBlink } = useBlinkSystem({
-    enabled: true,
+    enabled: false,
     frequencyMultiplier: emotionConfig.blinkFrequencyMultiplier,
   });
 
@@ -62,7 +62,7 @@ export const FaceScreen: React.FC = () => {
     const words = streamedTextRef.current.trim().split(/\s+/);
     totalWordsRef.current = words.length;
     setReceivedWords(words);
-    setCurrentWordIndex(words.length - 1);
+    // DO NOT aggressively advance the index here! Wait for audio sync.
   }, []);
 
   const handleStreamEnd = useCallback(() => {
@@ -89,11 +89,11 @@ export const FaceScreen: React.FC = () => {
   const streamLocalFallback = useCallback((fullText: string) => {
     const words = fullText.split(' ');
     setReceivedWords(words);
-    setCurrentWordIndex(0);
+    setCurrentWordIndex(-1);
     setIsReceiving(true);
     setCurrentEmotionState('thinking');
     setTimeout(() => {
-      let idx = 0;
+      let idx = -1;
       const interval = setInterval(() => {
         idx++;
         if (idx < words.length) {
@@ -113,7 +113,7 @@ export const FaceScreen: React.FC = () => {
   const handleSendMessage = (userText: string) => {
     streamedTextRef.current = '';
     setReceivedWords([]);
-    setCurrentWordIndex(0);
+    setCurrentWordIndex(-1);
     setCurrentEmotionState('thinking');
     const sent = sendSpeechToAI(userText);
     if (!sent) {

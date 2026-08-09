@@ -8,64 +8,74 @@ interface UpperLidProps {
   emotionState: EmotionalState;
 }
 
-const LID_BASE = 74;
-const DIP = 15;
+const LID_BASE = 130;
 
 const EMOTION_DROP: Record<EmotionalState, number> = {
   neutral:     0,
-  happy:       -20,
-  excited:     -40,
-  angry:       200,
-  sad:         110,
+  happy:       -22,
+  excited:     -42,
+  angry:       95,
+  sad:         60,
   sleepy:      280,
-  focused:     158,
+  focused:     28,
   thinking:    -14,
   curious:     -30,
-  confused:    55,
-  embarrassed: 138,
-  celebrating: -52,
+  confused:    30,
+  embarrassed: 85,
+  celebrating: -48,
   listening:   0,
   talking:     0,
 };
 
-const EMOTION_SKEW: Record<EmotionalState, number> = {
-  neutral: 0,   happy: 0,     excited: 0,   angry: -1.5,
-  sad: 1.4,     sleepy: 0.7,  focused: -0.5, thinking: 1.4,
-  curious: -1.0, confused: 2.5, embarrassed: 1.2,
-  celebrating: 0, listening: 0, talking: 0,
+const EMOTION_DIP: Record<EmotionalState, number> = {
+  neutral:     25,
+  happy:       8,
+  excited:     4,
+  angry:       35,
+  sad:         12,
+  sleepy:      0,
+  focused:     22,
+  thinking:    12,
+  curious:     8,
+  confused:    28,
+  embarrassed: 10,
+  celebrating: 4,
+  listening:   15,
+  talking:     15,
 };
 
-function makeLidFill(b: number, d: number): string {
-  const notch = b - d;
+const EMOTION_SKEW: Record<EmotionalState, number> = {
+  neutral:     0,
+  happy:       0,
+  excited:     0,
+  angry:       -2.5,
+  sad:         2.0,
+  sleepy:      1.0,
+  focused:     -0.8,
+  thinking:    2.0,
+  curious:     -1.2,
+  confused:    4.0,
+  embarrassed: 1.8,
+  celebrating: 0,
+  listening:   0,
+  talking:     0,
+};
+
+function makeLidFill(bLeft: number, bRight: number, d: number, cx: number): string {
+  const bCenter = (bLeft + bRight) / 2;
+  const notch = Math.max(2, bCenter - d);
+  const arch = 25; // Lesser upward curve height
   return [
-    `M 0 0`,
-    `L 1000 0`,
-    `L 1000 ${b}`,
-    `C 880 ${b} 700 ${b} 550 ${b}`,
-    `C 530 ${b} 514 ${notch} 500 ${notch}`,
-    `C 486 ${notch} 470 ${b} 450 ${b}`,
-    `C 300 ${b} 120 ${b} 0 ${b}`,
+    `M -100 -100`,
+    `L 1100 -100`,
+    `L 1100 ${bRight}`,
+    `C 750 ${bRight - arch} ${600 + cx} ${bCenter} ${530 + cx} ${bCenter}`,
+    `C ${515 + cx} ${bCenter} ${506 + cx} ${notch} ${500 + cx} ${notch}`,
+    `C ${494 + cx} ${notch} ${485 + cx} ${bCenter} ${470 + cx} ${bCenter}`,
+    `C ${400 + cx} ${bCenter} 250 ${bLeft - arch} -100 ${bLeft}`,
     `Z`,
   ].join(' ');
 }
-
-function makeSeal(b: number, d: number): string {
-  const notch = b - d;
-  return [
-    `M 0 ${b}`,
-    `C 120 ${b} 300 ${b} 450 ${b}`,
-    `C 470 ${b} 486 ${notch} 500 ${notch}`,
-    `C 514 ${notch} 530 ${b} 550 ${b}`,
-    `C 700 ${b} 880 ${b} 1000 ${b}`,
-  ].join(' ');
-}
-
-const SPRING = {
-  type: 'spring' as const,
-  stiffness: 155,
-  damping: 26,
-  mass: 1.0,
-};
 
 export const UpperLid: React.FC<UpperLidProps> = ({
   blinkProgress,
@@ -73,26 +83,38 @@ export const UpperLid: React.FC<UpperLidProps> = ({
   emotionState,
 }) => {
   const drop    = EMOTION_DROP[emotionState] ?? 0;
-  const gazeAdj = currentGaze.y * 14;
-  const skewX   = (EMOTION_SKEW[emotionState] ?? 0) + currentGaze.x * 0.7;
+  const dipBase = EMOTION_DIP[emotionState] ?? 15;
+  
+  // Massive dynamic tracking of eyeballs
+  const gazeAdjY = currentGaze.y * 65; // Lids follow up/down
+  const gazeAdjX = currentGaze.x * 45; // Lids slant left/right
+  const skewX    = EMOTION_SKEW[emotionState] ?? 0; // Pure emotion skew
+  const cx       = currentGaze.x * 120; // Center notch slides left/right
 
-  const bottom = blinkProgress > 0.05
-    ? 435
-    : Math.max(18, Math.min(435, LID_BASE + drop + gazeAdj));
+  let bLeft = LID_BASE + drop + gazeAdjY + gazeAdjX;
+  let bRight = LID_BASE + drop + gazeAdjY - gazeAdjX;
 
-  const dip = blinkProgress > 0.05 ? 0 : DIP;
+  // Mathematically interpolate the blink using the 60fps custom blink engine
+  // This allows half-blinks, sleepy blinks, and double blinks to work perfectly.
+  bLeft = bLeft + (435 - bLeft) * blinkProgress;
+  bRight = bRight + (435 - bRight) * blinkProgress;
 
-  const fillD = makeLidFill(bottom, dip);
-  const sealD = makeSeal(bottom, dip);
+  bLeft = Math.max(18, Math.min(435, bLeft));
+  bRight = Math.max(18, Math.min(435, bRight));
+
+  // The center 'M' notch flattens out fully during a blink
+  const dip = dipBase * (1 - blinkProgress);
+
+  const fillD = makeLidFill(bLeft, bRight, dip, cx);
 
   return (
     <motion.svg
       viewBox="0 0 1000 435"
       preserveAspectRatio="none"
       className="absolute inset-0 w-full h-full pointer-events-none"
-      style={{ zIndex: 30, originX: '50%', originY: '0%' }}
+      style={{ zIndex: 30, originX: '50%', originY: '0%', overflow: 'visible' }}
       animate={{ skewX }}
-      transition={SPRING}
+      transition={{ type: 'tween', duration: 0 }}
     >
       <defs>
         <linearGradient id="lgLid" x1="0" y1="0" x2="0" y2="1">
@@ -119,36 +141,14 @@ export const UpperLid: React.FC<UpperLidProps> = ({
         fill="url(#lgLid)"
         filter="url(#fLidDrop)"
         animate={{ d: fillD }}
-        transition={SPRING}
+        transition={{ type: 'tween', duration: 0 }}
       />
 
       <motion.path
         d={fillD}
         fill="url(#lgSheen)"
         animate={{ d: fillD }}
-        transition={SPRING}
-      />
-
-      <motion.path
-        d={sealD}
-        fill="none"
-        stroke="rgba(6,1,1,0.94)"
-        strokeWidth="7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        animate={{ d: sealD }}
-        transition={SPRING}
-      />
-
-      <motion.path
-        d={sealD}
-        fill="none"
-        stroke="rgba(255,195,195,0.24)"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        animate={{ d: sealD }}
-        transition={SPRING}
+        transition={{ type: 'tween', duration: 0 }}
       />
     </motion.svg>
   );

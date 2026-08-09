@@ -14,8 +14,8 @@ export const Iris: React.FC<IrisProps> = ({ pupilScale = 1.0, parallaxOffset }) 
     <div
       className="relative rounded-full flex items-center justify-center shadow-[inset_0_4px_16px_rgba(0,0,0,0.5),0_0_8px_rgba(13,27,57,0.4)] overflow-hidden"
       style={{
-        width: 'min(14vw, 14vw)',
-        height: 'min(14vw, 14vw)',
+        width: '12.5vw',
+        height: '12.5vw',
         background: `radial-gradient(circle at 48% 46%,
           #000000 0%,
           #65DCCF 32%,
@@ -32,6 +32,58 @@ export const Iris: React.FC<IrisProps> = ({ pupilScale = 1.0, parallaxOffset }) 
           background: `linear-gradient(to bottom, rgba(14,27,57,0.45) 0%, rgba(14,27,57,0.1) 45%, transparent 100%)`,
         }}
       />
+      {/* High-res crisp graphic striation lines (360 rays) */}
+      <svg 
+        className="absolute inset-0 w-full h-full mix-blend-overlay pointer-events-none" 
+        viewBox="0 0 100 100"
+        style={{ opacity: 0.9 }}
+      >
+        {Array.from({ length: 360 }).map((_, i) => {
+          const isPrimary = i % 4 === 0;
+          const isSecondary = i % 3 === 0;
+          const isDark = i % 7 === 0;
+
+          // Pseudo-random variations for jagged organic edges
+          const lengthVar = Math.sin(i * 4.3) * 6 + Math.cos(i * 11.7) * 3; 
+          const startVar = Math.cos(i * 7.1) * 1.5;
+
+          let y1 = 30 + startVar; // Start at pupil edge (radius 20)
+          let y2 = 12 + lengthVar; // End before outer dark ring (radius 38)
+          let stroke = '#80DEEA'; // Default cyan
+          let strokeWidth = 0.2;
+          let opacity = 0.5 + Math.sin(i * 2.7) * 0.2;
+
+          if (isDark) {
+            stroke = '#001F3F';
+            strokeWidth = 0.4;
+            opacity = 0.7;
+            y2 = 8 + lengthVar; // Dark lines reach further out
+          } else if (isPrimary) {
+            stroke = '#FFFFFF';
+            strokeWidth = 0.25;
+            opacity = 0.8;
+            y2 = 16 + lengthVar; // Bright white lines are shorter
+          } else if (isSecondary) {
+            stroke = '#E0F7FA';
+            strokeWidth = 0.2;
+            opacity = 0.6;
+          }
+
+          return (
+            <line
+              key={i}
+              x1="50"
+              y1={y1}
+              x2="50"
+              y2={y2}
+              stroke={stroke}
+              strokeWidth={strokeWidth}
+              opacity={opacity}
+              transform={`rotate(${i} 50 50)`}
+            />
+          );
+        })}
+      </svg>
 
       {/* Soft painted fiber texture */}
       <div
@@ -59,7 +111,7 @@ export const Iris: React.FC<IrisProps> = ({ pupilScale = 1.0, parallaxOffset }) 
       {/* Limbal ring */}
       <div className="absolute inset-0 rounded-full border-[3px] border-[#0D1B39]/80 pointer-events-none" style={{ filter: 'blur(0.8px)' }} />
 
-      <Pupil scale={pupilScale} />
+      <Pupil scale={pupilScale} parallaxOffset={parallaxOffset} />
       <Reflection parallaxOffset={parallaxOffset} />
       <Catchlight parallaxOffset={parallaxOffset} />
     </div>

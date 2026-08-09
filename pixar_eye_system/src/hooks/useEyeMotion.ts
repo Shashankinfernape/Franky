@@ -105,9 +105,9 @@ export function useEyeMotion(options: EyeMotionOptions = {}) {
       const finalTargetX = targetRef.current.x + microOffsetRef.current.x + breathingX;
       const finalTargetY = targetRef.current.y + microOffsetRef.current.y + breathingY;
 
-      // Spring dynamics parameters (Calm Pixar organic spring)
-      const stiffness = 120;
-      const damping = 16;
+      // Spring dynamics parameters (Snappy Pixar eye darts)
+      const stiffness = 380;
+      const damping = 28;
       const dt = 1 / 60;
 
       // Spring force

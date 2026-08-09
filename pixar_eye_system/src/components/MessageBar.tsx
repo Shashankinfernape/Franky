@@ -46,14 +46,13 @@ export const MessageBar: React.FC<MessageBarProps> = ({
                   key={idx}
                   className="inline-block mr-[0.3em] transition-all duration-200"
                   style={{
-                    filter: (isPast || isActive) ? 'blur(0px)' : 'blur(8px)',
-                    opacity: (isPast || isActive) ? 1 : 0,
+                    opacity: 1,
                     transform: isActive ? 'scale(1.08) translateY(0)' : 'translateY(0)',
                     color: isActive
                       ? '#67e8f9'
                       : isPast
                       ? 'rgba(248,250,252,0.95)'
-                      : 'rgba(248,250,252,0.6)',
+                      : '#475569',
                     fontWeight: isActive ? 700 : 500,
                     textShadow: isActive ? '0 0 12px rgba(103,232,249,0.7)' : 'none',
                   }}
