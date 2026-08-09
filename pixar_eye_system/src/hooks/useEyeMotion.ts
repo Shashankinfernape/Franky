@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useMotionValue, MotionValue } from 'framer-motion';
 import type { GazePoint } from '../types/eye';
 
@@ -15,7 +15,6 @@ export interface EyeMotionOutput {
   parallaxX: MotionValue<number>;
   parallaxY: MotionValue<number>;
   setGaze: (point: GazePoint) => void;
-  isUserInteracting: boolean;
 }
 
 export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
@@ -25,10 +24,6 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
     enableIdleLookAround = true,
     saccadeSpeedMultiplier = 1.0,
   } = options;
-
-  // Base target set by user / tracking (range -1 to 1)
-  const [targetGaze, setTargetGaze] = useState<GazePoint>({ x: 0, y: 0 });
-  const [isUserInteracting, setIsUserInteracting] = useState(false);
 
   // Motion values to avoid React re-renders on every frame
   const gazeX = useMotionValue(0);
@@ -42,11 +37,7 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
   const targetRef = useRef<GazePoint>({ x: 0, y: 0 });
   const microOffsetRef = useRef<GazePoint>({ x: 0, y: 0 });
   const lastUserInteractionTime = useRef<number>(Date.now());
-
-  // Keep targetRef synced with targetGaze
-  useEffect(() => {
-    targetRef.current = targetGaze;
-  }, [targetGaze]);
+  const isUserInteractingRef = useRef(false);
 
   // Micro-Saccades & Idle Lookaround Generator (Movie Accurate: 1-3 pixels amplitude ONLY!)
   useEffect(() => {
@@ -75,6 +66,7 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
       idleTimer = setTimeout(() => {
         const timeSinceUser = Date.now() - lastUserInteractionTime.current;
         if (timeSinceUser > 4000) {
+          isUserInteractingRef.current = false;
           // Pixar calm gaze pattern: slight look side, pause, return
           const idleTargets: GazePoint[] = [
             { x: 0.25, y: -0.08 },
@@ -84,7 +76,7 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
             { x: 0, y: 0 },
           ];
           const randomPick = idleTargets[Math.floor(Math.random() * idleTargets.length)];
-          setTargetGaze(randomPick);
+          targetRef.current = randomPick;
         }
         scheduleIdleLook();
       }, 4500 + Math.random() * 3000);
@@ -153,12 +145,14 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
   }, [enableBreathing, gazeX, gazeY, parallaxX, parallaxY]);
 
   // Set user gaze target explicitly (clamped -1 to 1)
+  // This is called 60-120 times per second during touch!
+  // It ONLY updates a ref, triggering ZERO React renders.
   const setGaze = (point: GazePoint) => {
     const clampedX = Math.max(-1, Math.min(1, point.x));
     const clampedY = Math.max(-1, Math.min(1, point.y));
 
-    setTargetGaze({ x: clampedX, y: clampedY });
-    setIsUserInteracting(true);
+    targetRef.current = { x: clampedX, y: clampedY };
+    isUserInteractingRef.current = true;
     lastUserInteractionTime.current = Date.now();
   };
 
@@ -168,6 +162,5 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
     parallaxX,
     parallaxY,
     setGaze,
-    isUserInteracting,
   };
 }
