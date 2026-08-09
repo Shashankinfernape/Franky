@@ -2,7 +2,6 @@ import React from 'react';
 import { Pupil } from './Pupil';
 import { Reflection } from './Reflection';
 import { Catchlight } from './Catchlight';
-import type { GazePoint } from '../types/eye';
 
 import { MotionValue } from 'framer-motion';
 

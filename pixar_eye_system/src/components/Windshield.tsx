@@ -2,7 +2,7 @@ import React from 'react';
 import { Eye } from './Eye';
 import { UpperLid } from './UpperLid';
 import { MotionValue } from 'framer-motion';
-import type { EmotionConfig, GazePoint } from '../types/eye';
+import type { EmotionConfig } from '../types/eye';
 
 interface WindshieldProps {
   emotion: EmotionConfig;
@@ -10,7 +10,7 @@ interface WindshieldProps {
   gazeY: MotionValue<number>;
   parallaxX: MotionValue<number>;
   parallaxY: MotionValue<number>;
-  blinkProgress: number;
+  blinkProgress: MotionValue<number>;
 }
 
 export const Windshield: React.FC<WindshieldProps> = ({
