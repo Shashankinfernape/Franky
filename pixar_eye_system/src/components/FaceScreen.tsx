@@ -23,7 +23,7 @@ export const FaceScreen: React.FC = () => {
   const [isFaceTracking, setIsFaceTracking] = useState<boolean>(true);
   const [enableMicroSaccades, setEnableMicroSaccades] = useState<boolean>(true);
   const [customPupilScale, setCustomPupilScale] = useState<number>(1.0);
-  const [activeVoice, setActiveVoice] = useState<string>('xtts_original');
+  const [activeVoice, setActiveVoice] = useState<string>('vits_lite');
 
   const [isReceiving, setIsReceiving] = useState(false);
   const [receivedWords, setReceivedWords] = useState<string[]>([]);
