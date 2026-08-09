@@ -102,7 +102,12 @@ export function useAIWebSocket({
 
     const connect = () => {
       try {
-        ws = new WebSocket('wss://emiot-backend.onrender.com/ws/emiot');
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const wsUrl = isLocal 
+          ? 'ws://localhost:5050/ws/emiot'
+          : 'wss://emiot-backend.onrender.com/ws/emiot';
+          
+        ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
         ws.onopen = () => {
