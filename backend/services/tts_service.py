@@ -137,30 +137,16 @@ class TTSService:
 
     async def _synthesize_piper_onnx(self, text: str) -> AsyncGenerator[bytes, None]:
         try:
-            if self._piper_voice is None:
-                await self._load_piper_model()
-
-            if self._piper_voice is not None:
+            from services.mcqueen_styletts2_service import mcqueen_styletts2_engine
+            if mcqueen_styletts2_engine.is_loaded:
                 loop = asyncio.get_event_loop()
-                import io, soundfile as sf, numpy as np
-
-                def _infer():
-                    chunks = list(self._piper_voice.synthesize(text))
-                    raw_pcm = b"".join([c.audio_int16_bytes for c in chunks if hasattr(c, 'audio_int16_bytes')])
-                    audio_data = np.frombuffer(raw_pcm, dtype=np.int16)
-                    buf = io.BytesIO()
-                    sf.write(buf, audio_data, self._piper_voice.config.sample_rate, format="WAV", subtype="PCM_16")
-                    buf.seek(0)
-                    return buf.read()
-
-                audio = await loop.run_in_executor(None, _infer)
+                audio = await loop.run_in_executor(None, mcqueen_styletts2_engine.synthesize_wav_bytes, text)
                 if audio:
-                    print(f"[Piper ONNX Lite] ✅ {len(audio):,} bytes (<0.05s CPU) — '{text[:50]}'")
+                    print(f"[McQueen StyleTTS2 Lite] ✅ {len(audio):,} bytes — '{text[:50]}'")
                     yield audio
                     return
-
         except Exception as e:
-            print(f"[Piper ONNX Lite] Error: {e} — falling back to Edge")
+            print(f"[McQueen StyleTTS2 Lite] Error: {e} — falling back to Edge")
 
         async for chunk in self._synthesize_edge(text):
             yield chunk

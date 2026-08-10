@@ -30,6 +30,8 @@ app.add_middleware(
 DIST_DIR = Path(__file__).parent / "dist"
 if DIST_DIR.exists():
     app.mount("/assets", StaticFiles(directory=str(DIST_DIR / "assets")), name="assets")
+    if (DIST_DIR / "voice").exists():
+        app.mount("/voice", StaticFiles(directory=str(DIST_DIR / "voice")), name="voice")
 
     @app.get("/")
     def serve_index():

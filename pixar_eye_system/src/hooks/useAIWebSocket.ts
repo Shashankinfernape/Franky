@@ -104,8 +104,10 @@ export function useAIWebSocket({
 
     const connect = () => {
       try {
-        // Always use Render backend — no local server required
-        const wsUrl = 'wss://lightning-mcqueen-f0xm.onrender.com/ws/emiot';
+        const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+        const wsUrl = isLocal 
+          ? `ws://${window.location.host}/ws/emiot`
+          : 'wss://lightning-mcqueen-f0xm.onrender.com/ws/emiot';
           
         ws = new WebSocket(wsUrl);
         wsRef.current = ws;

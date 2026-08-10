@@ -109,8 +109,8 @@ export const FaceScreen: React.FC = () => {
     onStreamEnd: handleStreamEnd,
     onWordSync: (wordIdx: number) => setCurrentWordIndex(wordIdx),
     totalWordsRef,
-    // Never play backend audio — all TTS is client-side
-    shouldPlayBackendAudio: false,
+    // Play backend audio stream for fine-tuned McQueen voice
+    shouldPlayBackendAudio: true,
   });
 
   // Voice selection — send set_voice to backend
