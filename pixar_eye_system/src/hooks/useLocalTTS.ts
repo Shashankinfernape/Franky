@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 
-// ─── Web Speech API TTS (Primary — built into Android WebView, zero downloads) ───
+// ─── Web Speech API TTS (Fallback if ONNX fails) ─────────────────────────
 
 function hasSpeechSynthesis(): boolean {
   return typeof window !== 'undefined' && 'speechSynthesis' in window;
@@ -13,7 +13,6 @@ function speakWebSpeech(
 ): boolean {
   if (!hasSpeechSynthesis()) return false;
 
-  // Cancel any ongoing speech
   window.speechSynthesis.cancel();
 
   const utterance = new SpeechSynthesisUtterance(text);
@@ -21,7 +20,6 @@ function speakWebSpeech(
   utterance.pitch = 1.0;
   utterance.volume = 1.0;
 
-  // Try to pick an English voice
   const voices = window.speechSynthesis.getVoices();
   const englishVoice = voices.find(v => v.lang.startsWith('en'));
   if (englishVoice) utterance.voice = englishVoice;
@@ -37,7 +35,7 @@ function speakWebSpeech(
   return true;
 }
 
-// ─── Piper TTS (Secondary fallback via piper-tts-web WASM) ─────────────────
+// ─── Piper / McQueen ONNX Neural TTS Engine (Primary) ─────────────────────
 
 const MOCK_VOICE_ID = 'en_US-hfc_female-medium';
 let piperInitPromise: Promise<boolean> | null = null;
@@ -54,14 +52,14 @@ function patchFetchForLocalModel() {
         ? input.url
         : input.toString();
 
-    // Redirect HuggingFace model requests to local files
+    // Redirect HuggingFace model requests to our local McQueen ONNX model
     if (url.includes('huggingface.co') || url.includes(MOCK_VOICE_ID)) {
       const base = window.location.origin;
       if (url.endsWith('.json')) {
-        console.log('[TTS Patch] Redirecting .json to local');
+        console.log('[TTS Patch] Redirecting .json to local McQueen config');
         return originalFetch(`${base}/voice/piper_voice.onnx.json`, init);
       } else if (url.endsWith('.onnx')) {
-        console.log('[TTS Patch] Redirecting .onnx to local');
+        console.log('[TTS Patch] Redirecting .onnx to local McQueen ONNX model');
         return originalFetch(`${base}/voice/piper_voice.onnx`, init);
       }
     }
@@ -83,7 +81,7 @@ async function initPiper(): Promise<boolean> {
         piperWasm: base + 'piper_phonemize.wasm',
       },
     });
-    console.log('[Piper TTS] Session ready!', session ? 'ok' : 'null');
+    console.log('[Piper TTS] McQueen Neural Engine Ready!', session ? 'ok' : 'null');
     return true;
   } catch (e) {
     console.error('[Piper TTS] Init failed:', e);
@@ -96,26 +94,27 @@ async function initPiper(): Promise<boolean> {
 export function useLocalTTS() {
   const [isReady, setIsReady] = useState(false);
   const [progressInfo, setProgressInfo] = useState<string>('');
-  const engineRef = useRef<'webspeech' | 'piper' | null>(null);
+  const engineRef = useRef<'piper' | 'webspeech' | null>(null);
 
   const initLocalTTS = useCallback(async () => {
-    // 1. Try Web Speech API first — instant, no downloads
-    if (hasSpeechSynthesis()) {
-      console.log('[TTS] Web Speech API available — ready instantly!');
-      engineRef.current = 'webspeech';
-      setIsReady(true);
-      setProgressInfo('');
-      return;
-    }
-
-    // 2. Fall back to Piper WASM
-    setProgressInfo('Loading neural voice engine...');
+    // 1. Try McQueen Piper ONNX Neural engine first
+    setProgressInfo('Loading McQueen neural voice...');
     if (!piperInitPromise) {
       piperInitPromise = initPiper();
     }
     const ok = await piperInitPromise;
     if (ok) {
+      console.log('[TTS] McQueen ONNX Engine loaded!');
       engineRef.current = 'piper';
+      setIsReady(true);
+      setProgressInfo('');
+      return;
+    }
+
+    // 2. Fall back to Web Speech API if ONNX fails
+    if (hasSpeechSynthesis()) {
+      console.log('[TTS] Falling back to Web Speech API');
+      engineRef.current = 'webspeech';
       setIsReady(true);
       setProgressInfo('');
     } else {
@@ -130,43 +129,41 @@ export function useLocalTTS() {
         return;
       }
 
-      if (engineRef.current === 'webspeech') {
-        const started = speakWebSpeech(text, onStart, onEnd);
-        if (!started) {
-          console.warn('[TTS] Web Speech failed, nothing to fall back to');
-          onEnd?.();
+      if (engineRef.current === 'piper') {
+        try {
+          const tts = await import('@mintplex-labs/piper-tts-web');
+          const wavBlob = await tts.predict({
+            text,
+            voiceId: MOCK_VOICE_ID as any,
+          });
+          const arrayBuffer = await wavBlob.arrayBuffer();
+
+          const AudioCtx =
+            window.AudioContext ||
+            (window as any).webkitAudioContext;
+          const ctx = new AudioCtx();
+
+          if (ctx.state === 'suspended') await ctx.resume();
+
+          const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+          const source = ctx.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(ctx.destination);
+          onStart?.();
+          source.start();
+          source.onended = () => {
+            onEnd?.();
+            ctx.close();
+          };
+          return;
+        } catch (err) {
+          console.error('[Piper TTS] predict failed, using WebSpeech fallback:', err);
         }
-        return;
       }
 
-      // Piper path
-      try {
-        const tts = await import('@mintplex-labs/piper-tts-web');
-        const wavBlob = await tts.predict({
-          text,
-          voiceId: MOCK_VOICE_ID as any,
-        });
-        const arrayBuffer = await wavBlob.arrayBuffer();
-
-        const AudioCtx =
-          window.AudioContext ||
-          (window as any).webkitAudioContext;
-        const ctx = new AudioCtx();
-
-        if (ctx.state === 'suspended') await ctx.resume();
-
-        const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-        const source = ctx.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(ctx.destination);
-        onStart?.();
-        source.start();
-        source.onended = () => {
-          onEnd?.();
-          ctx.close();
-        };
-      } catch (err) {
-        console.error('[Piper TTS] predict failed:', err);
+      // WebSpeech fallback
+      const started = speakWebSpeech(text, onStart, onEnd);
+      if (!started) {
         onEnd?.();
       }
     },
