@@ -9,9 +9,6 @@ import { useBlinkSystem } from '../hooks/useBlinkSystem';
 import { useAIWebSocket } from '../hooks/useAIWebSocket';
 import { useLocalTTS } from '../hooks/useLocalTTS';
 
-// Detect if running inside the Android/iOS Capacitor wrapper
-const IS_NATIVE = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform();
-
 const McQueenAIResponses: Record<string, string> = {
   'Are you ready to race?':
     "You bet I'm ready! Lightning McQueen is always first off the starting line!",
@@ -77,10 +74,10 @@ export const FaceScreen: React.FC = () => {
   }, []);
 
   const handleStreamEnd = useCallback(() => {
-    // On Android (native): backend audio is blocked by WebView, so speak locally
-    // On Desktop: backend already streamed audio via audio_chunk, just reset state
-    if (IS_NATIVE && activeVoice === 'vits_lite' && isTTSReady) {
-      speakText(streamedTextRef.current,
+    // Always speak client-side — works in any browser, zero server dependency
+    if (isTTSReady && streamedTextRef.current) {
+      speakText(
+        streamedTextRef.current,
         () => {
           let idx = -1;
           const words = streamedTextRef.current.trim().split(/\s+/);
@@ -104,7 +101,7 @@ export const FaceScreen: React.FC = () => {
         setCurrentEmotionState('happy');
       }, 1500);
     }
-  }, [activeVoice, isTTSReady, speakText]);
+  }, [isTTSReady, speakText]);
 
   const { isConnected: isAIConnected, sendSpeechToAI, sendRawMessage } = useAIWebSocket({
     onEmotionChange: handleEmotionChange,
@@ -112,9 +109,8 @@ export const FaceScreen: React.FC = () => {
     onStreamEnd: handleStreamEnd,
     onWordSync: (wordIdx: number) => setCurrentWordIndex(wordIdx),
     totalWordsRef,
-    // On desktop: let backend stream audio normally.
-    // On Android native: block backend audio, WebSpeech handles it instead.
-    shouldPlayBackendAudio: !IS_NATIVE,
+    // Never play backend audio — all TTS is client-side
+    shouldPlayBackendAudio: false,
   });
 
   // Voice selection — send set_voice to backend

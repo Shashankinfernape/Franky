@@ -104,14 +104,8 @@ export function useAIWebSocket({
 
     const connect = () => {
       try {
-        // Check if running on Android/iOS via Capacitor
-        const isCapacitor = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform();
-        const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        
-        // If we are native, ALWAYS connect to Render backend
-        const wsUrl = (isLocalHost && !isCapacitor)
-          ? 'ws://localhost:5050/ws/emiot'
-          : 'wss://lightning-mcqueen-f0xm.onrender.com/ws/emiot';
+        // Always use Render backend — no local server required
+        const wsUrl = 'wss://lightning-mcqueen-f0xm.onrender.com/ws/emiot';
           
         ws = new WebSocket(wsUrl);
         wsRef.current = ws;
