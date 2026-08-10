@@ -75,7 +75,7 @@ async function initPiper(): Promise<boolean> {
     patchFetchForLocalModel();
     const tts = await import('@mintplex-labs/piper-tts-web');
     const base = window.location.origin + '/voice/wasm/';
-    piperSession = await tts.TtsSession.create({
+    const session = await tts.TtsSession.create({
       voiceId: MOCK_VOICE_ID as any,
       wasmPaths: {
         onnxWasm: base,
@@ -83,7 +83,7 @@ async function initPiper(): Promise<boolean> {
         piperWasm: base + 'piper_phonemize.wasm',
       },
     });
-    console.log('[Piper TTS] Session ready!');
+    console.log('[Piper TTS] Session ready!', session ? 'ok' : 'null');
     return true;
   } catch (e) {
     console.error('[Piper TTS] Init failed:', e);

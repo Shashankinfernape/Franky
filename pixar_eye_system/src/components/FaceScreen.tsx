@@ -7,8 +7,10 @@ import { EMOTIONS } from '../constants/emotions';
 import { useEyeMotion } from '../hooks/useEyeMotion';
 import { useBlinkSystem } from '../hooks/useBlinkSystem';
 import { useAIWebSocket } from '../hooks/useAIWebSocket';
-
 import { useLocalTTS } from '../hooks/useLocalTTS';
+
+// Detect if running inside the Android/iOS Capacitor wrapper
+const IS_NATIVE = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform();
 
 const McQueenAIResponses: Record<string, string> = {
   'Are you ready to race?':
@@ -75,8 +77,10 @@ export const FaceScreen: React.FC = () => {
   }, []);
 
   const handleStreamEnd = useCallback(() => {
-    if (activeVoice === 'vits_lite' && isTTSReady) {
-      speakText(streamedTextRef.current, 
+    // On Android (native): backend audio is blocked by WebView, so speak locally
+    // On Desktop: backend already streamed audio via audio_chunk, just reset state
+    if (IS_NATIVE && activeVoice === 'vits_lite' && isTTSReady) {
+      speakText(streamedTextRef.current,
         () => {
           let idx = -1;
           const words = streamedTextRef.current.trim().split(/\s+/);
@@ -108,7 +112,9 @@ export const FaceScreen: React.FC = () => {
     onStreamEnd: handleStreamEnd,
     onWordSync: (wordIdx: number) => setCurrentWordIndex(wordIdx),
     totalWordsRef,
-    shouldPlayBackendAudio: activeVoice !== 'vits_lite',
+    // On desktop: let backend stream audio normally.
+    // On Android native: block backend audio, WebSpeech handles it instead.
+    shouldPlayBackendAudio: !IS_NATIVE,
   });
 
   // Voice selection — send set_voice to backend
