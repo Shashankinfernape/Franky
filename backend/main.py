@@ -37,6 +37,13 @@ if DIST_DIR.exists():
     def serve_index():
         return FileResponse(str(DIST_DIR / "index.html"))
 
+    @app.get("/favicon.svg")
+    def serve_favicon():
+        fav = DIST_DIR / "favicon.svg"
+        if fav.exists():
+            return FileResponse(str(fav))
+        return {"status": "ok"}
+
 @app.get("/health")
 def health_check():
     return {
@@ -114,8 +121,13 @@ async def websocket_endpoint(websocket: WebSocket):
                                     "emotion": target_emotion
                                 })
 
-                            # Check for sentence end boundary (. ! ? \n)
-                            if re.search(r'[.!?\n]', token):
+                            # Fire TTS ASAP — 4 words = instant feel at Groq speed
+                            word_count = len(sentence_buffer.split())
+                            at_boundary = bool(re.search(r'[.!?\n]', token))
+                            at_comma_pause = bool(re.search(r'[,;:]', token)) and word_count >= 3
+                            at_word_limit = word_count >= 4
+
+                            if at_boundary or at_comma_pause or at_word_limit:
                                 sentence_to_speak = sentence_buffer.strip()
                                 sentence_buffer = ""
                                 if sentence_to_speak:

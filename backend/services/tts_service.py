@@ -31,7 +31,7 @@ VOICES = {
     },
 }
 
-DEFAULT_VOICE = "vits_lite"
+DEFAULT_VOICE = "edge_neural"
 
 
 class TTSService:
@@ -136,18 +136,20 @@ class TTSService:
     # ── Piper ONNX Lite (CPU, ~15 MB, Sub-100ms Instant Mobile Engine) ────────
 
     async def _synthesize_piper_onnx(self, text: str) -> AsyncGenerator[bytes, None]:
+        # Try fine-tuned McQueen StyleTTS2 model if available and loaded
         try:
             from services.mcqueen_styletts2_service import mcqueen_styletts2_engine
             if mcqueen_styletts2_engine.is_loaded:
                 loop = asyncio.get_event_loop()
                 audio = await loop.run_in_executor(None, mcqueen_styletts2_engine.synthesize_wav_bytes, text)
                 if audio:
-                    print(f"[McQueen StyleTTS2 Lite] ✅ {len(audio):,} bytes — '{text[:50]}'")
+                    print(f"[McQueen StyleTTS2] ✅ {len(audio):,} bytes — '{text[:50]}'")
                     yield audio
                     return
         except Exception as e:
-            print(f"[McQueen StyleTTS2 Lite] Error: {e} — falling back to Edge")
+            print(f"[McQueen StyleTTS2] Error: {e}")
 
+        # Fall back to instant edge_tts
         async for chunk in self._synthesize_edge(text):
             yield chunk
 
@@ -176,38 +178,40 @@ class TTSService:
         try:
             import edge_tts
 
-            print(f"[Edge TTS] Generating: '{text[:50]}...'")
-            communicate = edge_tts.Communicate(text, voice="en-US-AndrewNeural")
+            print(f"[Edge TTS] '{text[:60]}'")
+            # GuyNeural: deep confident male voice, +20% faster speech rate
+            communicate = edge_tts.Communicate(text, voice="en-US-GuyNeural", rate="+20%", pitch="-8Hz")
 
-            mp3_buf = io.BytesIO()
+            mp3_chunks = []
             async for chunk in communicate.stream():
                 if chunk["type"] == "audio":
-                    mp3_buf.write(chunk["data"])
+                    mp3_chunks.append(chunk["data"])
 
-            mp3_buf.seek(0)
-            mp3_bytes = mp3_buf.read()
-
-            if mp3_bytes:
+            if mp3_chunks:
+                mp3_bytes = b"".join(mp3_chunks)
                 loop = asyncio.get_event_loop()
 
-                def _convert():
-                    import pydub
-                    seg = pydub.AudioSegment.from_file(io.BytesIO(mp3_bytes), format="mp3")
-                    wav_buf = io.BytesIO()
-                    seg.export(wav_buf, format="wav")
-                    return wav_buf.getvalue()
+                def _to_wav():
+                    import soundfile as sf
+                    import numpy as np
+                    from pydub import AudioSegment
+                    seg = AudioSegment.from_file(io.BytesIO(mp3_bytes), format="mp3")
+                    seg = seg.set_frame_rate(24000).set_channels(1)
+                    samples = np.array(seg.get_array_of_samples(), dtype=np.int16)
+                    buf = io.BytesIO()
+                    sf.write(buf, samples, 24000, subtype="PCM_16", format="WAV")
+                    buf.seek(0)
+                    return buf.read()
 
-                wav_bytes = await loop.run_in_executor(None, _convert)
-                print(f"[Edge TTS] ✅ {len(wav_bytes):,} bytes")
-                yield wav_bytes
+                wav = await loop.run_in_executor(None, _to_wav)
+                print(f"[Edge TTS] ✅ {len(wav):,} bytes")
+                yield wav
                 return
 
         except Exception as e:
             print(f"[Edge TTS Error] {e}")
 
-        # Emergency silence chunk (1s of silence at 24kHz PCM)
-        print("[TTS] ⚠️ All engines failed — returning silence fallback")
-        yield b"\x00" * 48000
+        yield b"\x00" * 48000  # silence fallback
 
 
 tts_service = TTSService()
