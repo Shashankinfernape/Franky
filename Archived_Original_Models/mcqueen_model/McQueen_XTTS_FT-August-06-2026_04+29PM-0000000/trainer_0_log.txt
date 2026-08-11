@@ -1,0 +1,754 @@
+ > Training Environment:
+ | > Backend: Torch
+ | > Mixed precision: True
+ | > Precision: fp16
+ | > Current device: 0
+ | > Num. of GPUs: 1
+ | > Num. of CPUs: 6
+ | > Num. of Torch Threads: 1
+ | > Torch seed: 1
+ | > Torch CUDNN: True
+ | > Torch CUDNN deterministic: False
+ | > Torch CUDNN benchmark: False
+ | > Torch TF32 MatMul: False
+ > Start Tensorboard: tensorboard --logdir=C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+ > Model has 518442047 parameters
+
+[4m[1m > EPOCH: 0/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:30:00) [0m
+
+[1m   --> TIME: 2026-08-06 16:30:02 -- STEP: 0/14 -- GLOBAL_STEP: 0[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.8785  (0.8784701824188232)
+     | > loader_time: 1.2969  (1.29685378074646)
+
+
+[1m   --> TIME: 2026-08-06 16:30:04 -- STEP: 10/14 -- GLOBAL_STEP: 10[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1327  (0.17710084915161134)
+     | > loader_time: 0.0073  (0.013396000862121582)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time: 0.009417057037353516 [0m(+0)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0)
+     | > avg_loss: 3.76185941696167 [0m(+0)
+
+ > BEST MODEL : C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000\best_model_14.pth
+
+[4m[1m > EPOCH: 1/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:30:10) [0m
+
+[1m   --> TIME: 2026-08-06 16:30:13 -- STEP: 6/14 -- GLOBAL_STEP: 20[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.2059  (0.21275067329406738)
+     | > loader_time: 0.0068  (0.010759075482686361)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[92m 0.00873255729675293 [0m(-0.0006844997406005859)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 2/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:30:15) [0m
+
+[1m   --> TIME: 2026-08-06 16:30:15 -- STEP: 2/14 -- GLOBAL_STEP: 30[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1369  (0.1492760181427002)
+     | > loader_time: 0.0079  (0.009662747383117676)
+
+
+[1m   --> TIME: 2026-08-06 16:30:17 -- STEP: 12/14 -- GLOBAL_STEP: 40[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1521  (0.15574602286020917)
+     | > loader_time: 0.0076  (0.007883608341217041)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[92m 0.007214546203613281 [0m(-0.0015180110931396484)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 3/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:30:17) [0m
+
+[1m   --> TIME: 2026-08-06 16:30:19 -- STEP: 8/14 -- GLOBAL_STEP: 50[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1334  (0.14528924226760864)
+     | > loader_time: 0.006  (0.007666647434234619)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[92m 0.006723880767822266 [0m(-0.0004906654357910156)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 4/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:30:20) [0m
+
+[1m   --> TIME: 2026-08-06 16:30:21 -- STEP: 4/14 -- GLOBAL_STEP: 60[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.2989  (0.20411354303359985)
+     | > loader_time: 0.0086  (0.007854700088500977)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[91m 0.0073468685150146484 [0m(+0.0006229877471923828)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 5/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:30:23) [0m
+
+[1m   --> TIME: 2026-08-06 16:30:24 -- STEP: 0/14 -- GLOBAL_STEP: 70[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1998  (0.19978594779968262)
+     | > loader_time: 0.0068  (0.0067636966705322266)
+
+
+[1m   --> TIME: 2026-08-06 16:30:26 -- STEP: 10/14 -- GLOBAL_STEP: 80[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1621  (0.18361153602600097)
+     | > loader_time: 0.007  (0.007084798812866211)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[92m 0.006494760513305664 [0m(-0.0008521080017089844)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 6/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:30:27) [0m
+
+[1m   --> TIME: 2026-08-06 16:30:29 -- STEP: 6/14 -- GLOBAL_STEP: 90[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.2104  (0.22155149777730307)
+     | > loader_time: 0.0083  (0.007516145706176758)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[92m 0.006176948547363281 [0m(-0.0003178119659423828)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 7/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:30:31) [0m
+
+[1m   --> TIME: 2026-08-06 16:30:31 -- STEP: 2/14 -- GLOBAL_STEP: 100[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1449  (0.1631166934967041)
+     | > loader_time: 0.0073  (0.007176518440246582)
+
+
+[1m   --> TIME: 2026-08-06 16:30:33 -- STEP: 12/14 -- GLOBAL_STEP: 110[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1547  (0.16175498565038046)
+     | > loader_time: 0.006  (0.0075048406918843584)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[91m 0.007382392883300781 [0m(+0.0012054443359375)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 8/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:30:33) [0m
+
+[1m   --> TIME: 2026-08-06 16:30:35 -- STEP: 8/14 -- GLOBAL_STEP: 120[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1326  (0.13941437005996704)
+     | > loader_time: 0.0061  (0.006312966346740723)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[91m 0.008689641952514648 [0m(+0.0013072490692138672)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 9/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:30:36) [0m
+
+[1m   --> TIME: 2026-08-06 16:30:38 -- STEP: 4/14 -- GLOBAL_STEP: 130[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.2076  (0.2037084698677063)
+     | > loader_time: 0.0081  (0.007642149925231934)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[92m 0.0073261260986328125 [0m(-0.001363515853881836)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 10/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:30:40) [0m
+
+[1m   --> TIME: 2026-08-06 16:30:40 -- STEP: 0/14 -- GLOBAL_STEP: 140[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.2164  (0.2164139747619629)
+     | > loader_time: 0.0074  (0.007376432418823242)
+
+
+[1m   --> TIME: 2026-08-06 16:30:42 -- STEP: 10/14 -- GLOBAL_STEP: 150[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1635  (0.16122727394104003)
+     | > loader_time: 0.007  (0.007266426086425781)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[91m 0.007681369781494141 [0m(+0.0003552436828613281)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 11/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:30:43) [0m
+
+[1m   --> TIME: 2026-08-06 16:30:44 -- STEP: 6/14 -- GLOBAL_STEP: 160[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1425  (0.16063479582468668)
+     | > loader_time: 0.0074  (0.006799976030985515)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[91m 0.008063793182373047 [0m(+0.00038242340087890625)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 12/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:30:46) [0m
+
+[1m   --> TIME: 2026-08-06 16:30:46 -- STEP: 2/14 -- GLOBAL_STEP: 170[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1379  (0.1500999927520752)
+     | > loader_time: 0.0069  (0.006474971771240234)
+
+
+[1m   --> TIME: 2026-08-06 16:30:48 -- STEP: 12/14 -- GLOBAL_STEP: 180[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1608  (0.1747056245803833)
+     | > loader_time: 0.0077  (0.008200426896413168)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[92m 0.006987571716308594 [0m(-0.0010762214660644531)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 13/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:30:49) [0m
+
+[1m   --> TIME: 2026-08-06 16:30:50 -- STEP: 8/14 -- GLOBAL_STEP: 190[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1716  (0.14643457531929016)
+     | > loader_time: 0.0071  (0.006934463977813721)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[91m 0.008503913879394531 [0m(+0.0015163421630859375)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 14/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:30:51) [0m
+
+[1m   --> TIME: 2026-08-06 16:30:52 -- STEP: 4/14 -- GLOBAL_STEP: 200[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1315  (0.141534686088562)
+     | > loader_time: 0.006  (0.00710219144821167)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[92m 0.0071833133697509766 [0m(-0.0013206005096435547)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 15/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:30:54) [0m
+
+[1m   --> TIME: 2026-08-06 16:30:54 -- STEP: 0/14 -- GLOBAL_STEP: 210[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.2241  (0.2241203784942627)
+     | > loader_time: 0.0103  (0.010292768478393555)
+
+
+[1m   --> TIME: 2026-08-06 16:30:56 -- STEP: 10/14 -- GLOBAL_STEP: 220[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1449  (0.15555083751678467)
+     | > loader_time: 0.0075  (0.00712282657623291)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[92m 0.0068280696868896484 [0m(-0.0003552436828613281)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 16/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:30:56) [0m
+
+[1m   --> TIME: 2026-08-06 16:30:58 -- STEP: 6/14 -- GLOBAL_STEP: 230[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1515  (0.16337907314300537)
+     | > loader_time: 0.0083  (0.007743636767069499)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[92m 0.0061533451080322266 [0m(-0.0006747245788574219)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 17/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:30:59) [0m
+
+[1m   --> TIME: 2026-08-06 16:31:00 -- STEP: 2/14 -- GLOBAL_STEP: 240[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1347  (0.14925992488861084)
+     | > loader_time: 0.0071  (0.006819963455200195)
+
+
+[1m   --> TIME: 2026-08-06 16:31:01 -- STEP: 12/14 -- GLOBAL_STEP: 250[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1765  (0.14807784557342527)
+     | > loader_time: 0.0062  (0.006695071856180827)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[91m 0.0072553157806396484 [0m(+0.0011019706726074219)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 18/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:31:02) [0m
+
+[1m   --> TIME: 2026-08-06 16:31:04 -- STEP: 8/14 -- GLOBAL_STEP: 260[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.2012  (0.18887045979499817)
+     | > loader_time: 0.0075  (0.007729649543762207)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[91m 0.007999181747436523 [0m(+0.000743865966796875)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 19/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:31:05) [0m
+
+[1m   --> TIME: 2026-08-06 16:31:06 -- STEP: 4/14 -- GLOBAL_STEP: 270[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1562  (0.15734487771987915)
+     | > loader_time: 0.006  (0.007624924182891846)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[92m 0.00695037841796875 [0m(-0.0010488033294677734)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 20/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:31:08) [0m
+
+[1m   --> TIME: 2026-08-06 16:31:08 -- STEP: 0/14 -- GLOBAL_STEP: 280[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1897  (0.18972444534301758)
+     | > loader_time: 0.0072  (0.007241487503051758)
+
+
+[1m   --> TIME: 2026-08-06 16:31:09 -- STEP: 10/14 -- GLOBAL_STEP: 290[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1427  (0.1517944812774658)
+     | > loader_time: 0.006  (0.007230877876281738)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[91m 0.00853419303894043 [0m(+0.0015838146209716797)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 21/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:31:10) [0m
+
+[1m   --> TIME: 2026-08-06 16:31:11 -- STEP: 6/14 -- GLOBAL_STEP: 300[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1408  (0.150863250096639)
+     | > loader_time: 0.007  (0.00782171885172526)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[92m 0.007560253143310547 [0m(-0.0009739398956298828)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 22/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:31:13) [0m
+
+[1m   --> TIME: 2026-08-06 16:31:13 -- STEP: 2/14 -- GLOBAL_STEP: 310[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1586  (0.18235766887664795)
+     | > loader_time: 0.0076  (0.007338166236877441)
+
+
+[1m   --> TIME: 2026-08-06 16:31:15 -- STEP: 12/14 -- GLOBAL_STEP: 320[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1864  (0.1875286102294922)
+     | > loader_time: 0.0104  (0.008810162544250488)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[92m 0.006182670593261719 [0m(-0.0013775825500488281)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 23/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:31:16) [0m
+
+[1m   --> TIME: 2026-08-06 16:31:17 -- STEP: 8/14 -- GLOBAL_STEP: 330[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1498  (0.1575668752193451)
+     | > loader_time: 0.0091  (0.007631123065948486)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[91m 0.0069086551666259766 [0m(+0.0007259845733642578)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 24/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:31:18) [0m
+
+[1m   --> TIME: 2026-08-06 16:31:19 -- STEP: 4/14 -- GLOBAL_STEP: 340[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1448  (0.15203523635864258)
+     | > loader_time: 0.0063  (0.0065146684646606445)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[91m 0.007868528366088867 [0m(+0.0009598731994628906)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 25/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:31:21) [0m
+
+[1m   --> TIME: 2026-08-06 16:31:21 -- STEP: 0/14 -- GLOBAL_STEP: 350[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.2685  (0.26851773262023926)
+     | > loader_time: 0.009  (0.009044885635375977)
+
+
+[1m   --> TIME: 2026-08-06 16:31:23 -- STEP: 10/14 -- GLOBAL_STEP: 360[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1408  (0.15405361652374266)
+     | > loader_time: 0.0066  (0.006742930412292481)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time:[92m 0.00708460807800293 [0m(-0.0007839202880859375)
+     | > avg_loss_text_ce: 0.01780238375067711 [0m(+0.0)
+     | > avg_loss_mel_ce: 3.7440569400787354 [0m(+0.0)
+     | > avg_loss: 3.76185941696167 [0m(+0.0)
+
+
+[4m[1m > EPOCH: 26/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+29PM-0000000
+
+[1m > TRAINING (2026-08-06 16:31:24) [0m
+
+[1m   --> TIME: 2026-08-06 16:31:25 -- STEP: 6/14 -- GLOBAL_STEP: 370[0m
+     | > loss_text_ce: nan  (nan)
+     | > loss_mel_ce: nan  (nan)
+     | > loss: nan  (nan)
+     | > current_lr: 5e-06 
+     | > step_time: 0.1656  (0.17176032066345215)
+     | > loader_time: 0.0075  (0.00776219367980957)
+

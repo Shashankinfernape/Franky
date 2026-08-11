@@ -1,0 +1,47 @@
+ > Training Environment:
+ | > Backend: Torch
+ | > Mixed precision: False
+ | > Precision: float32
+ | > Current device: 0
+ | > Num. of GPUs: 1
+ | > Num. of CPUs: 6
+ | > Num. of Torch Threads: 1
+ | > Torch seed: 1
+ | > Torch CUDNN: True
+ | > Torch CUDNN deterministic: False
+ | > Torch CUDNN benchmark: False
+ | > Torch TF32 MatMul: False
+ > Start Tensorboard: tensorboard --logdir=C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+19PM-0000000
+
+ > Model has 518442047 parameters
+
+[4m[1m > EPOCH: 0/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+19PM-0000000
+
+[1m > TRAINING (2026-08-06 16:19:23) [0m
+
+[1m   --> TIME: 2026-08-06 16:19:25 -- STEP: 0/7 -- GLOBAL_STEP: 0[0m
+     | > loss_text_ce: 0.02485736832022667  (0.02485736832022667)
+     | > loss_mel_ce: 3.764712333679199  (3.764712333679199)
+     | > loss: 0.47369620203971863  (0.47369620203971863)
+     | > current_lr: 1e-06 
+     | > step_time: 0.6025  (0.6024610996246338)
+     | > loader_time: 1.2098  (1.20979905128479)
+
+
+[1m > EVALUATION [0m
+
+
+  [1m--> EVAL PERFORMANCE[0m
+     | > avg_loader_time: 0.6201362609863281 [0m(+0)
+     | > avg_loss_text_ce: 0.017794877290725708 [0m(+0)
+     | > avg_loss_mel_ce: 3.732527017593384 [0m(+0)
+     | > avg_loss: 3.750321865081787 [0m(+0)
+
+ > BEST MODEL : C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+19PM-0000000\best_model_7.pth
+
+[4m[1m > EPOCH: 1/100[0m
+ --> C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+19PM-0000000
+
+[1m > TRAINING (2026-08-06 16:20:30) [0m
+ ! Run is kept in C:\Users\user\Desktop\El projecto\Franky\backend\voice_dataset\mcqueen_model\McQueen_XTTS_FT-August-06-2026_04+19PM-0000000

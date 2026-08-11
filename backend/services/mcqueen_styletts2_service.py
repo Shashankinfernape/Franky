@@ -139,7 +139,7 @@ class McQueenStyleTTS2Engine:
             s_pred = self.sampler(
                 noise,
                 embedding=bert_dur[0].unsqueeze(0),
-                num_steps=10,
+                num_steps=3,
                 embedding_scale=1.5
             ).squeeze(0)
 
