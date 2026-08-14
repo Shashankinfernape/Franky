@@ -6,8 +6,19 @@ import requests
 from pathlib import Path
 from typing import AsyncGenerator
 
+# ── Colab ngrok TTS Server URL ───────────────────────────────────────────────
+# Update this URL each time you restart your Colab server
+COLAB_TTS_URL = "https://reveler-waged-unscented.ngrok-free.dev/tts"
+
 # ── Available voices ──────────────────────────────────────────────────────────
 VOICES = {
+    "styletts2_colab": {
+        "id":          "styletts2_colab",
+        "name":        "🚗 McQueen StyleTTS2 (Colab)",
+        "description": "Fine-tuned StyleTTS2 — 200 epoch trained McQueen voice via Colab GPU",
+        "size":        "~500 MB",
+        "quality":     "★★★★★",
+    },
     "xtts_original": {
         "id":          "xtts_original",
         "name":        "⚡ McQueen Original",
@@ -31,7 +42,7 @@ VOICES = {
     },
 }
 
-DEFAULT_VOICE = "edge_neural"
+DEFAULT_VOICE = "styletts2_colab"
 
 
 class TTSService:
@@ -80,7 +91,11 @@ class TTSService:
 
         clean = re.sub(r'[*_#`]', '', text.strip())
 
-        if self._active_voice == "xtts_original":
+        if self._active_voice == "styletts2_colab":
+            async for chunk in self._synthesize_styletts2_colab(clean):
+                yield chunk
+
+        elif self._active_voice == "xtts_original":
             async for chunk in self._synthesize_xtts(clean):
                 yield chunk
 
@@ -91,6 +106,39 @@ class TTSService:
         else:  # edge_neural
             async for chunk in self._synthesize_edge(clean):
                 yield chunk
+
+    # ── StyleTTS2 Colab Server (ngrok, GPU, best quality) ─────────────────────
+
+    async def _synthesize_styletts2_colab(self, text: str) -> AsyncGenerator[bytes, None]:
+        try:
+            loop = asyncio.get_event_loop()
+
+            def _call():
+                r = requests.post(
+                    COLAB_TTS_URL,
+                    json={"text": text},
+                    timeout=30,
+                    headers={"ngrok-skip-browser-warning": "true"},
+                )
+                if r.status_code == 200:
+                    return r.content  # Raw WAV bytes
+                print(f"[StyleTTS2 Colab] ⚠️  HTTP {r.status_code}")
+                return None
+
+            audio = await loop.run_in_executor(None, _call)
+            if audio:
+                print(f"[StyleTTS2 Colab] ✅ {len(audio):,} bytes — '{text[:50]}'")
+                yield audio
+                return
+
+        except requests.exceptions.ConnectionError:
+            print("[StyleTTS2 Colab] ⚠️  Colab server offline — falling back to Edge voice")
+        except Exception as e:
+            print(f"[StyleTTS2 Colab] Error: {e}")
+
+        # Fallback to edge_neural if Colab is offline
+        async for chunk in self._synthesize_edge(text):
+            yield chunk
 
     # ── XTTS Original (GPU, port 8009) — UNTOUCHED ──────────────────────────
 
