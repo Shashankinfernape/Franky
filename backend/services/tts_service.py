@@ -125,9 +125,24 @@ class TTSService:
                 print(f"[StyleTTS2 Colab] ⚠️  HTTP {r.status_code}")
                 return None
 
+            def _to_pcm16(raw_wav: bytes) -> bytes:
+                """Convert any WAV format to 16-bit PCM so all browsers can decode it."""
+                import soundfile as sf
+                import numpy as np
+                buf_in = io.BytesIO(raw_wav)
+                data, sr = sf.read(buf_in, dtype='float32')
+                # Clip and convert to int16
+                data_int16 = (data * 32767).clip(-32768, 32767).astype(np.int16)
+                buf_out = io.BytesIO()
+                sf.write(buf_out, data_int16, sr, format='WAV', subtype='PCM_16')
+                buf_out.seek(0)
+                return buf_out.read()
+
             audio = await loop.run_in_executor(None, _call)
             if audio:
-                print(f"[StyleTTS2 Colab] ✅ {len(audio):,} bytes — '{text[:50]}'")
+                # Ensure browser-compatible 16-bit PCM format
+                audio = await loop.run_in_executor(None, _to_pcm16, audio)
+                print(f"[StyleTTS2 Colab] ✅ {len(audio):,} bytes (PCM_16) — '{text[:50]}'")
                 yield audio
                 return
 
