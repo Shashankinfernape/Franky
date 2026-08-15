@@ -1,6 +1,6 @@
 import React from 'react';
 import type { AttentionOutput } from '../types/vision';
-import { Eye, ShieldAlert, EyeOff, Target } from 'lucide-react';
+import { Eye, ShieldAlert, EyeOff, Target, Sparkles } from 'lucide-react';
 
 interface VisionHUDProps {
   attentionData: AttentionOutput | null;
@@ -10,6 +10,7 @@ interface VisionHUDProps {
   isOpen: boolean;
   onToggleOpen: () => void;
   onRecalibrate?: () => void;
+  onOpenCalibrationStudio?: () => void;
 }
 
 export const VisionHUD: React.FC<VisionHUDProps> = ({
@@ -20,6 +21,7 @@ export const VisionHUD: React.FC<VisionHUDProps> = ({
   isOpen,
   onToggleOpen,
   onRecalibrate,
+  onOpenCalibrationStudio,
 }) => {
   if (!cameraActive && !isLoading && !error) return null;
 
@@ -120,15 +122,27 @@ export const VisionHUD: React.FC<VisionHUDProps> = ({
               />
             </div>
 
-            {onRecalibrate && (
-              <button
-                onClick={onRecalibrate}
-                className="w-full mt-2 py-1.5 px-2 bg-cyan-950/70 hover:bg-cyan-900 border border-cyan-500/40 text-cyan-300 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow"
-              >
-                <Target className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Recalibrate Eye Level</span>
-              </button>
-            )}
+            <div className="flex flex-col gap-1.5 pt-1">
+              {onOpenCalibrationStudio && (
+                <button
+                  onClick={onOpenCalibrationStudio}
+                  className="w-full py-2 px-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold rounded-xl text-[11px] flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-md"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+                  <span>Calibrate Room Trajectory</span>
+                </button>
+              )}
+
+              {onRecalibrate && (
+                <button
+                  onClick={onRecalibrate}
+                  className="w-full py-1 px-2 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 rounded-xl text-[10px] flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                >
+                  <Target className="w-3 h-3 text-cyan-400" />
+                  <span>Quick Re-Center Baseline</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

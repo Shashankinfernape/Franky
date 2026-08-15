@@ -3,6 +3,7 @@ import { Windshield } from './Windshield';
 import { ControlPanel } from './ControlPanel';
 import { MessageBar } from './MessageBar';
 import { VisionHUD } from './VisionHUD';
+import { CalibrationStudio } from './CalibrationStudio';
 import type { EmotionalState } from '../types/eye';
 import { EMOTIONS } from '../constants/emotions';
 import { useEyeMotion } from '../hooks/useEyeMotion';
@@ -10,7 +11,7 @@ import { useBlinkSystem } from '../hooks/useBlinkSystem';
 import { useAIWebSocket } from '../hooks/useAIWebSocket';
 import { useLocalTTS } from '../hooks/useLocalTTS';
 import { useVisionPerception } from '../hooks/useVisionPerception';
-import type { AttentionOutput } from '../types/vision';
+import type { AttentionOutput, Point2D } from '../types/vision';
 
 const McQueenAIResponses: Record<string, string> = {
   'Are you ready to race?':
@@ -29,6 +30,10 @@ export const FaceScreen: React.FC = () => {
   const [customPupilScale, setCustomPupilScale] = useState<number>(1.0);
   const [activeVoice, setActiveVoice] = useState<string>('vits_lite');
   const [isVisionHUDOpen, setIsVisionHUDOpen] = useState<boolean>(false);
+
+  // Calibration Studio state
+  const [isCalibrationStudioOpen, setIsCalibrationStudioOpen] = useState<boolean>(false);
+  const [calibrationForcedGaze, setCalibrationForcedGaze] = useState<Point2D | null>(null);
 
   const [isReceiving, setIsReceiving] = useState(false);
   const [receivedWords, setReceivedWords] = useState<string[]>([]);
@@ -61,9 +66,11 @@ export const FaceScreen: React.FC = () => {
     error: visionError,
     cameraActive,
     attentionData,
+    currentPupilCamera,
     recalibrateBaseline,
   } = useVisionPerception({
     enabled: isVisionTracking,
+    forcedGaze: calibrationForcedGaze,
     onAttentionUpdate: handleAttentionUpdate,
   });
 
@@ -256,6 +263,7 @@ export const FaceScreen: React.FC = () => {
         isOpen={isVisionHUDOpen}
         onToggleOpen={() => setIsVisionHUDOpen(!isVisionHUDOpen)}
         onRecalibrate={recalibrateBaseline}
+        onOpenCalibrationStudio={() => setIsCalibrationStudioOpen(true)}
       />
 
       <ControlPanel
@@ -275,6 +283,19 @@ export const FaceScreen: React.FC = () => {
         isVisionHUDOpen={isVisionHUDOpen}
         onToggleVisionHUD={() => setIsVisionHUDOpen(!isVisionHUDOpen)}
         isVisionReady={isVisionReady}
+        onOpenCalibrationStudio={() => setIsCalibrationStudioOpen(true)}
+      />
+
+      {/* Ground-Truth Calibration Studio Modal */}
+      <CalibrationStudio
+        isOpen={isCalibrationStudioOpen}
+        onClose={() => {
+          setIsCalibrationStudioOpen(false);
+          setCalibrationForcedGaze(null);
+        }}
+        currentPupilCamera={currentPupilCamera}
+        onSetCalibrationGaze={setCalibrationForcedGaze}
+        onSpeak={(text) => streamLocalFallback(text, true)}
       />
 
       {/* Connection & Status Badges */}

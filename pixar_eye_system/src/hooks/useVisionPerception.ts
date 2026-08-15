@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { FilesetResolver, FaceLandmarker } from '@mediapipe/tasks-vision';
-import type { AttentionOutput, VisionTarget } from '../types/vision';
+import type { AttentionOutput, Point2D, VisionTarget } from '../types/vision';
 import { AttentionArbitrator } from '../services/attentionArbitrator';
+import { gazeCalibration } from '../services/gazeCalibration';
 
 const WASM_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm';
 const FACE_MODEL_URL =
@@ -9,32 +10,32 @@ const FACE_MODEL_URL =
 
 export interface UseVisionPerceptionOptions {
   enabled: boolean;
+  forcedGaze?: Point2D | null; // For calibration studio reference gaze
   onAttentionUpdate?: (output: AttentionOutput) => void;
 }
 
 export function useVisionPerception(options: UseVisionPerceptionOptions) {
-  const { enabled, onAttentionUpdate } = options;
+  const { enabled, forcedGaze = null, onAttentionUpdate } = options;
 
   const [isLoading, setIsLoading] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attentionData, setAttentionData] = useState<AttentionOutput | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
+  const [currentPupilCamera, setCurrentPupilCamera] = useState<Point2D | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const faceLandmarkerRef = useRef<FaceLandmarker | null>(null);
   const arbitratorRef = useRef<AttentionArbitrator>(new AttentionArbitrator());
-
-  // Adaptive Vertical Baseline Auto-Calibrator (Mona Lisa Eye Level)
-  const baselineYRef = useRef<number>(0.44);
-  const isBaselineCalibratedRef = useRef<boolean>(false);
-  const sampleCountRef = useRef<number>(0);
 
   const animFrameRef = useRef<number | null>(null);
   const lastFaceTimeRef = useRef<number>(0);
 
   const onAttentionUpdateRef = useRef(onAttentionUpdate);
   onAttentionUpdateRef.current = onAttentionUpdate;
+
+  const forcedGazeRef = useRef<Point2D | null>(forcedGaze);
+  forcedGazeRef.current = forcedGaze;
 
   // Initialize MediaPipe FaceLandmarker with Iris Refinement
   useEffect(() => {
@@ -107,10 +108,6 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
       await videoRef.current.play();
       setCameraActive(true);
       setError(null);
-      // Reset baseline calibration on new camera session
-      isBaselineCalibratedRef.current = false;
-      sampleCountRef.current = 0;
-      baselineYRef.current = 0.44;
     } catch (camErr: unknown) {
       console.error('[Vision] Camera access error:', camErr);
       setError('Camera access denied or unavailable');
@@ -126,6 +123,7 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
       videoRef.current.srcObject = null;
     }
     setCameraActive(false);
+    setCurrentPupilCamera(null);
     arbitratorRef.current.reset();
   }, []);
 
@@ -141,13 +139,7 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
     };
   }, [enabled, isReady, startCamera, stopCamera]);
 
-  // Recalibrate eye baseline manually or automatically
-  const recalibrateBaseline = useCallback(() => {
-    isBaselineCalibratedRef.current = false;
-    sampleCountRef.current = 0;
-  }, []);
-
-  // Main Mona-Lisa Direct Eye Contact Tracking Loop
+  // Main High-Precision Eye Tracking Loop with Calibration Mapping
   useEffect(() => {
     if (!cameraActive || !isReady) return;
 
@@ -159,6 +151,21 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
       const video = videoRef.current;
       const now = performance.now();
 
+      // If calibration studio is actively forcing a reference gaze, emit that directly
+      if (forcedGazeRef.current) {
+        const output: AttentionOutput = {
+          state: 'EYES_LOCKED',
+          targetPoint: forcedGazeRef.current,
+          smoothedPoint: forcedGazeRef.current,
+          activeSource: 'iris',
+          confidence: 1.0,
+        };
+        setAttentionData(output);
+        if (onAttentionUpdateRef.current) {
+          onAttentionUpdateRef.current(output);
+        }
+      }
+
       if (video && video.readyState >= 2 && !video.paused) {
         const targets: VisionTarget[] = [];
 
@@ -169,12 +176,6 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
             const faceResult = faceLandmarkerRef.current.detectForVideo(video, now);
             if (faceResult.faceLandmarks && faceResult.faceLandmarks.length > 0) {
               const landmarks = faceResult.faceLandmarks[0];
-
-              // Key Iris & Eye Landmarks
-              // Left Iris: 468, Right Iris: 473
-              // Left Eyelids: Top 159, Bottom 145, Inner 133, Outer 33
-              // Right Eyelids: Top 386, Bottom 374, Inner 362, Outer 263
-              // Inter-Eye Nose Bridge: 168 / 6
 
               const hasIris = landmarks.length >= 478;
 
@@ -193,42 +194,21 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
                 const isEyesOpen = leftEAR > 0.10 && rightEAR > 0.10;
 
                 if (isEyesOpen && leftIris && rightIris) {
-                  // Physical 3D pupil midpoint
+                  // Physical 3D pupil midpoint in camera frame [0, 1]
                   const pupilMidX = (leftIris.x + rightIris.x) / 2;
                   const pupilMidY = (leftIris.y + rightIris.y) / 2;
 
-                  // Adaptive Baseline Calibration (learns user's sitting eye height over first 30 frames)
-                  if (!isBaselineCalibratedRef.current) {
-                    sampleCountRef.current++;
-                    baselineYRef.current =
-                      baselineYRef.current * 0.85 + pupilMidY * 0.15;
-                    if (sampleCountRef.current > 35) {
-                      isBaselineCalibratedRef.current = true;
-                    }
-                  }
+                  setCurrentPupilCamera({ x: pupilMidX, y: pupilMidY });
 
-                  // Inter-pupil distance in camera frame for depth scaling
-                  const pupilDistance = Math.abs(rightIris.x - leftIris.x) || 0.08;
-                  const depthFactor = Math.max(0.75, Math.min(1.35, 0.11 / pupilDistance));
-
-                  // 1. HORIZONTAL TRAJECTORY (Natural Selfie Alignment):
-                  // In camera: moving to user's RIGHT produces pupilMidX < 0.5.
-                  // Negative sign ensures when you move RIGHT, Franky turns eyes to the RIGHT to look into your eyes!
-                  // When you move LEFT, Franky turns eyes to the LEFT!
-                  const rawGazeX = -(pupilMidX - 0.5) * 1.95 * depthFactor;
-
-                  // 2. VERTICAL TRAJECTORY (Mona Lisa Eye Contact):
-                  // Difference from user's calibrated eye level + upward compensation (-0.22)
-                  // to place pupils dead-center in Franky's eye socket when looking at screen!
-                  const deltaY = (pupilMidY - baselineYRef.current) * 2.2 * depthFactor;
-                  const rawGazeY = deltaY - 0.18;
-
-                  const clampedX = Math.max(-1.0, Math.min(1.0, rawGazeX));
-                  const clampedY = Math.max(-1.0, Math.min(1.0, rawGazeY));
+                  // Apply Ground-Truth Piecewise Calibration Mapping
+                  const calibratedGaze = gazeCalibration.mapCameraToScreenGaze({
+                    x: pupilMidX,
+                    y: pupilMidY,
+                  });
 
                   targets.push({
                     source: 'iris',
-                    point: { x: clampedX, y: clampedY },
+                    point: calibratedGaze,
                     confidence: 0.99,
                     timestamp: now,
                     metadata: {
@@ -240,17 +220,21 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
                   });
                 }
               }
+            } else {
+              setCurrentPupilCamera(null);
             }
           } catch (fErr) {
             console.warn('[Vision] Eye tracking tick error:', fErr);
           }
         }
 
-        // Arbitrate Attention (Mona Lisa Direct Eye Contact)
-        const output = arbitratorRef.current.update(targets, now);
-        setAttentionData(output);
-        if (onAttentionUpdateRef.current) {
-          onAttentionUpdateRef.current(output);
+        // Only update arbitrator when not in forced calibration gaze mode
+        if (!forcedGazeRef.current) {
+          const output = arbitratorRef.current.update(targets, now);
+          setAttentionData(output);
+          if (onAttentionUpdateRef.current) {
+            onAttentionUpdateRef.current(output);
+          }
         }
       }
 
@@ -266,12 +250,18 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
     };
   }, [cameraActive, isReady]);
 
+  const recalibrateBaseline = useCallback(() => {
+    gazeCalibration.resetToDefault();
+    arbitratorRef.current.reset();
+  }, []);
+
   return {
     isLoading,
     isReady,
     error,
     cameraActive,
     attentionData,
+    currentPupilCamera,
     videoElement: videoRef.current,
     startCamera,
     stopCamera,

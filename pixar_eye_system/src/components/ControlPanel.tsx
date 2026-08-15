@@ -21,6 +21,7 @@ import {
   X,
   Mic,
   Radar,
+  Target,
 } from 'lucide-react';
 
 const VOICE_OPTIONS = [
@@ -67,6 +68,7 @@ interface ControlPanelProps {
   isVisionHUDOpen: boolean;
   onToggleVisionHUD: () => void;
   isVisionReady: boolean;
+  onOpenCalibrationStudio?: () => void;
 }
 
 const EMOTION_ICONS: Record<EmotionalState, React.ReactNode> = {
@@ -103,6 +105,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   isVisionHUDOpen,
   onToggleVisionHUD,
   isVisionReady,
+  onOpenCalibrationStudio,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -158,6 +161,34 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
 
           {/* Settings Body */}
           <div className="mt-3 space-y-4 max-h-[55vh] overflow-y-auto pr-1 custom-scrollbar">
+            {/* Calibration Studio Action Banner */}
+            {onOpenCalibrationStudio && (
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  onOpenCalibrationStudio();
+                }}
+                className="w-full py-2.5 px-3 bg-gradient-to-r from-cyan-900/60 to-blue-900/60 hover:from-cyan-800/80 hover:to-blue-800/80 border border-cyan-500/50 rounded-2xl flex items-center justify-between text-left transition-all active:scale-98 shadow-md cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-cyan-500/20 rounded-xl">
+                    <Target className="w-4 h-4 text-cyan-400" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-cyan-200">
+                      🎯 Calibrate Mona Lisa Eye Contact
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      Align 5 room directions with Thumbs Up 👍
+                    </div>
+                  </div>
+                </div>
+                <span className="text-[10px] bg-cyan-500/30 text-cyan-300 font-bold px-2 py-1 rounded-lg border border-cyan-400/30">
+                  Launch
+                </span>
+              </button>
+            )}
+
             {/* Emotions Grid */}
             <div>
               <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-2">
