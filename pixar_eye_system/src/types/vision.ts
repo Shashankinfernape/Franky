@@ -13,6 +13,8 @@ export interface VisionTarget {
   metadata?: {
     irisLeft?: Point2D;
     irisRight?: Point2D;
+    earLeft?: number;
+    earRight?: number;
     headEuler?: { yaw: number; pitch: number; roll: number };
     motionEnergy?: number;
     distance?: number;
@@ -21,9 +23,7 @@ export interface VisionTarget {
 
 export type AttentionState =
   | 'IDLE'
-  | 'TRACKING_HUMAN'
-  | 'CURIOUS_GLANCE'
-  | 'RETURNING'
+  | 'EYES_LOCKED'
   | 'SEARCHING';
 
 export interface AttentionOutput {
@@ -32,18 +32,9 @@ export interface AttentionOutput {
   smoothedPoint: Point2D; // 1€ / EMA filtered target [-1, 1]
   activeSource: TargetSource;
   confidence: number;
-  curiosityScore: number;
-  curiosityDilation: number; // 0.0 to 0.3 pupil scale boost when curious
-  isGlancing: boolean;
 }
 
 export interface AttentionConfig {
-  irisWeight: number; // default 0.75
-  headYawWeight: number; // default 0.25
-  enableCuriosity: boolean; // default false for strict human focus (Eyes -> Face -> Body)
-  curiosityThreshold: number; // default 0.65
-  curiosityMinDurationMs: number; // default 700ms
-  curiosityMaxDurationMs: number; // default 1400ms
-  curiosityCooldownMs: number; // default 3000ms
-  humanPersistenceMs: number; // hold human target for X ms if lost
+  irisSensitivity: number; // default 1.2
+  persistenceMs: number; // hold last eye target for X ms if lost
 }

@@ -28,7 +28,6 @@ export const FaceScreen: React.FC = () => {
   const [enableMicroSaccades, setEnableMicroSaccades] = useState<boolean>(true);
   const [customPupilScale, setCustomPupilScale] = useState<number>(1.0);
   const [activeVoice, setActiveVoice] = useState<string>('vits_lite');
-  const [curiositySensitivity, setCuriositySensitivity] = useState<number>(0.65);
   const [isVisionHUDOpen, setIsVisionHUDOpen] = useState<boolean>(false);
 
   const [isReceiving, setIsReceiving] = useState(false);
@@ -64,18 +63,14 @@ export const FaceScreen: React.FC = () => {
     attentionData,
   } = useVisionPerception({
     enabled: isVisionTracking,
-    enablePose: true,
-    enableCuriosity: false, // Strict human priority: Eyes -> Face -> Body
-    curiositySensitivity,
     onAttentionUpdate: handleAttentionUpdate,
   });
 
-  // Emotional Pupil Modulation + Curiosity Dilation Boost
+  // Emotional Pupil Modulation
   const emotionBase = EMOTIONS[currentEmotionState] || EMOTIONS.neutral;
-  const curiosityDilation = attentionData?.curiosityDilation ?? 0.0;
   const emotionConfig = {
     ...emotionBase,
-    pupilScale: emotionBase.pupilScale * customPupilScale * (1.0 + curiosityDilation),
+    pupilScale: emotionBase.pupilScale * customPupilScale,
   };
 
   const { blinkProgress, triggerBlink } = useBlinkSystem({
@@ -275,8 +270,6 @@ export const FaceScreen: React.FC = () => {
         onChangePupilScale={setCustomPupilScale}
         activeVoice={activeVoice}
         onVoiceChange={handleVoiceChange}
-        curiositySensitivity={curiositySensitivity}
-        onChangeCuriositySensitivity={setCuriositySensitivity}
         isVisionHUDOpen={isVisionHUDOpen}
         onToggleVisionHUD={() => setIsVisionHUDOpen(!isVisionHUDOpen)}
         isVisionReady={isVisionReady}

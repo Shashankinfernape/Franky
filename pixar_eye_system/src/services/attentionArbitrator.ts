@@ -9,14 +9,8 @@ import type {
 import { OneEuroFilter2D } from '../utils/oneEuroFilter';
 
 const DEFAULT_CONFIG: AttentionConfig = {
-  irisWeight: 0.75,
-  headYawWeight: 0.25,
-  enableCuriosity: false, // Default: Focus strictly on human eyes -> face -> body
-  curiosityThreshold: 0.62,
-  curiosityMinDurationMs: 650,
-  curiosityMaxDurationMs: 1200,
-  curiosityCooldownMs: 3200, // 3.2s anti-ADHD cooldown
-  humanPersistenceMs: 1600, // Hold last known human target for 1.6s
+  irisSensitivity: 1.2,
+  persistenceMs: 1200, // Hold last known eye target for 1.2s when blinked/obscured
 };
 
 export class AttentionArbitrator {
@@ -25,15 +19,9 @@ export class AttentionArbitrator {
 
   private state: AttentionState = 'IDLE';
 
-  // Last known human target
-  private lastHumanTarget: VisionTarget | null = null;
-  private lastHumanTimestamp: number = 0;
-
-  // Curiosity glance management
-  private glanceStartTime: number = 0;
-  private glanceDuration: number = 0;
-  private glanceTargetPoint: Point2D = { x: 0, y: 0 };
-  private lastGlanceEndTime: number = 0;
+  // Last known eye target
+  private lastEyeTarget: VisionTarget | null = null;
+  private lastEyeTimestamp: number = 0;
 
   constructor(config: Partial<AttentionConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -42,127 +30,40 @@ export class AttentionArbitrator {
   }
 
   update(targets: VisionTarget[], now: number = performance.now()): AttentionOutput {
-    // 1. Separate human targets from motion targets
-    // Strict priority: Iris (high confidence) > Face (medium confidence) > Body (fallback)
-    const irisTarget = targets.find((t) => t.source === 'iris' && t.confidence > 0.4);
-    const faceTarget = targets.find((t) => t.source === 'face' && t.confidence > 0.35);
-    const bodyTarget = targets.find((t) => t.source === 'body' && t.confidence > 0.3);
-    const motionTarget = this.config.enableCuriosity
-      ? targets.find((t) => t.source === 'motion' && t.confidence > 0.3)
-      : undefined;
+    // 1. Search strictly for Iris / Eye target
+    const irisTarget = targets.find((t) => t.source === 'iris' && t.confidence > 0.35);
 
-    // Pick best available human target (Cascade Priority: Eyes / Iris -> Face Trajectory -> Body / Torso)
-    let bestHumanTarget: VisionTarget | null = null;
     if (irisTarget) {
-      bestHumanTarget = irisTarget;
-    } else if (faceTarget) {
-      bestHumanTarget = faceTarget;
-    } else if (bodyTarget) {
-      bestHumanTarget = bodyTarget;
+      this.lastEyeTarget = irisTarget;
+      this.lastEyeTimestamp = now;
     }
 
-    if (bestHumanTarget) {
-      this.lastHumanTarget = bestHumanTarget;
-      this.lastHumanTimestamp = now;
-    }
-
-    const hasRecentHuman =
-      this.lastHumanTarget !== null && now - this.lastHumanTimestamp < this.config.humanPersistenceMs;
-
-    const timeSinceLastGlance = now - this.lastGlanceEndTime;
-    const isCooldownActive = timeSinceLastGlance < this.config.curiosityCooldownMs;
+    const hasRecentEye =
+      this.lastEyeTarget !== null && now - this.lastEyeTimestamp < this.config.persistenceMs;
 
     let targetPoint: Point2D = { x: 0, y: 0 };
     let activeSource: TargetSource = 'idle';
     let confidence = 0.0;
-    let curiosityScore = motionTarget ? motionTarget.confidence : 0;
-    let curiosityDilation = 0.0;
-    let isGlancing = false;
 
-    // 2. State Machine Transitions
-    switch (this.state) {
-      case 'IDLE':
-      case 'SEARCHING':
-      case 'TRACKING_HUMAN':
-      case 'RETURNING': {
-        // Check if curiosity glance should trigger (only when enableCuriosity is active)
-        const shouldTriggerGlance =
-          this.config.enableCuriosity &&
-          motionTarget &&
-          motionTarget.confidence >= this.config.curiosityThreshold &&
-          !isCooldownActive &&
-          this.state !== 'RETURNING';
-
-        if (shouldTriggerGlance) {
-          this.state = 'CURIOUS_GLANCE';
-          this.glanceStartTime = now;
-          const energy = motionTarget.metadata?.motionEnergy ?? 0.5;
-          this.glanceDuration =
-            this.config.curiosityMinDurationMs +
-            energy * (this.config.curiosityMaxDurationMs - this.config.curiosityMinDurationMs);
-          this.glanceTargetPoint = { ...motionTarget.point };
-
-          targetPoint = this.glanceTargetPoint;
-          activeSource = 'motion';
-          confidence = motionTarget.confidence;
-          isGlancing = true;
-          curiosityDilation = 0.18;
-        } else if (bestHumanTarget) {
-          this.state = 'TRACKING_HUMAN';
-          targetPoint = bestHumanTarget.point;
-          activeSource = bestHumanTarget.source;
-          confidence = bestHumanTarget.confidence;
-        } else if (hasRecentHuman) {
-          this.state = 'SEARCHING';
-          targetPoint = this.lastHumanTarget!.point;
-          activeSource = this.lastHumanTarget!.source;
-          confidence = Math.max(
-            0.1,
-            1.0 - (now - this.lastHumanTimestamp) / this.config.humanPersistenceMs
-          );
-        } else {
-          this.state = 'IDLE';
-          targetPoint = { x: 0, y: 0 };
-          activeSource = 'idle';
-          confidence = 0.0;
-        }
-        break;
-      }
-
-      case 'CURIOUS_GLANCE': {
-        const elapsed = now - this.glanceStartTime;
-        if (elapsed < this.glanceDuration) {
-          if (motionTarget && motionTarget.confidence > 0.4) {
-            this.glanceTargetPoint = {
-              x: this.glanceTargetPoint.x * 0.8 + motionTarget.point.x * 0.2,
-              y: this.glanceTargetPoint.y * 0.8 + motionTarget.point.y * 0.2,
-            };
-          }
-          targetPoint = this.glanceTargetPoint;
-          activeSource = 'motion';
-          confidence = 0.9;
-          isGlancing = true;
-          curiosityDilation = 0.2;
-        } else {
-          this.state = 'RETURNING';
-          this.lastGlanceEndTime = now;
-
-          if (bestHumanTarget) {
-            targetPoint = bestHumanTarget.point;
-            activeSource = bestHumanTarget.source;
-            confidence = bestHumanTarget.confidence;
-          } else if (hasRecentHuman) {
-            targetPoint = this.lastHumanTarget!.point;
-            activeSource = this.lastHumanTarget!.source;
-            confidence = 0.5;
-          } else {
-            targetPoint = { x: 0, y: 0 };
-            activeSource = 'idle';
-            confidence = 0.0;
-          }
-        }
-        break;
-      }
+    // 2. Eyes-Only State Machine Transitions
+    if (irisTarget) {
+      this.state = 'EYES_LOCKED';
+      targetPoint = irisTarget.point;
+      activeSource = 'iris';
+      confidence = irisTarget.confidence;
+    } else if (hasRecentEye) {
+      this.state = 'SEARCHING';
+      targetPoint = this.lastEyeTarget!.point;
+      activeSource = 'iris';
+      confidence = Math.max(
+        0.1,
+        1.0 - (now - this.lastEyeTimestamp) / this.config.persistenceMs
+      );
+    } else {
+      this.state = 'IDLE';
+      targetPoint = { x: 0, y: 0 };
+      activeSource = 'idle';
+      confidence = 0.0;
     }
 
     // 3. Clamp target point to [-1.0, 1.0]
@@ -171,7 +72,7 @@ export class AttentionArbitrator {
       y: Math.max(-1.0, Math.min(1.0, targetPoint.y)),
     };
 
-    // 4. Smooth coordinates with 1€ adaptive filter
+    // 4. Smooth coordinates with 1€ adaptive filter for zero jitter & zero lag
     const smoothedPoint = this.filter.filter(clampedTarget.x, clampedTarget.y, now);
 
     return {
@@ -183,9 +84,6 @@ export class AttentionArbitrator {
       },
       activeSource,
       confidence,
-      curiosityScore,
-      curiosityDilation,
-      isGlancing,
     };
   }
 
@@ -200,9 +98,7 @@ export class AttentionArbitrator {
   reset(): void {
     this.filter.reset();
     this.state = 'IDLE';
-    this.lastHumanTarget = null;
-    this.lastHumanTimestamp = 0;
-    this.glanceStartTime = 0;
-    this.lastGlanceEndTime = 0;
+    this.lastEyeTarget = null;
+    this.lastEyeTimestamp = 0;
   }
 }

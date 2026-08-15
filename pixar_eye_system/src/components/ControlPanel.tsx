@@ -64,8 +64,6 @@ interface ControlPanelProps {
   onChangePupilScale: (val: number) => void;
   activeVoice: string;
   onVoiceChange: (voiceId: string) => void;
-  curiositySensitivity: number;
-  onChangeCuriositySensitivity: (val: number) => void;
   isVisionHUDOpen: boolean;
   onToggleVisionHUD: () => void;
   isVisionReady: boolean;
@@ -102,8 +100,6 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   onChangePupilScale,
   activeVoice,
   onVoiceChange,
-  curiositySensitivity,
-  onChangeCuriositySensitivity,
   isVisionHUDOpen,
   onToggleVisionHUD,
   isVisionReady,
@@ -140,7 +136,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
               <h2 className="text-xs font-bold tracking-wider uppercase text-slate-300">
-                Eye Controls & Perception Engine
+                Eye Controls & Perception Settings
               </h2>
             </div>
 
@@ -223,49 +219,21 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
               </div>
             </div>
 
-            {/* Curiosity & Perception Sliders */}
-            <div className="space-y-3 pt-2 border-t border-white/10">
-              {/* Curiosity Sensitivity Slider */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs text-slate-300">
-                  <span className="flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Room Curiosity Sensitivity
-                  </span>
-                  <span className="font-mono text-amber-400">
-                    {curiositySensitivity < 0.35
-                      ? 'Calm (Anti-ADHD)'
-                      : curiositySensitivity > 0.7
-                      ? 'Hyper-Curious'
-                      : 'Balanced'}
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="0.9"
-                  step="0.05"
-                  value={curiositySensitivity}
-                  onChange={(e) => onChangeCuriositySensitivity(parseFloat(e.target.value))}
-                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500"
-                />
+            {/* Pupil Scale Slider */}
+            <div className="space-y-1 pt-2 border-t border-white/10">
+              <div className="flex justify-between text-xs text-slate-300">
+                <span>Pupil Size</span>
+                <span className="font-mono text-cyan-400">{customPupilScale.toFixed(2)}x</span>
               </div>
-
-              {/* Pupil Scale Slider */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs text-slate-300">
-                  <span>Pupil Size</span>
-                  <span className="font-mono text-cyan-400">{customPupilScale.toFixed(2)}x</span>
-                </div>
-                <input
-                  type="range"
-                  min="0.6"
-                  max="1.35"
-                  step="0.05"
-                  value={customPupilScale}
-                  onChange={(e) => onChangePupilScale(parseFloat(e.target.value))}
-                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
-                />
-              </div>
+              <input
+                type="range"
+                min="0.6"
+                max="1.35"
+                step="0.05"
+                value={customPupilScale}
+                onChange={(e) => onChangePupilScale(parseFloat(e.target.value))}
+                className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+              />
             </div>
 
             {/* Toggles */}
@@ -279,7 +247,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 }`}
               >
                 <Camera className="w-3.5 h-3.5 text-cyan-400" />
-                <span>{isVisionTracking ? 'Camera ON' : 'Camera OFF'}</span>
+                <span>{isVisionTracking ? 'Eyes Lock ON' : 'Eyes Lock OFF'}</span>
                 {isVisionTracking && (
                   <span
                     className={`w-1.5 h-1.5 rounded-full ${
@@ -298,7 +266,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                 }`}
               >
                 <Radar className="w-3.5 h-3.5 text-purple-400" />
-                <span>Vision Radar</span>
+                <span>Eye Radar</span>
               </button>
 
               <button
