@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { FilesetResolver, FaceLandmarker, GestureRecognizer } from '@mediapipe/tasks-vision';
+import { FilesetResolver, FaceLandmarker } from '@mediapipe/tasks-vision';
 import type { AttentionOutput, Point2D, VisionTarget } from '../types/vision';
 import { AttentionArbitrator } from '../services/attentionArbitrator';
 import { gazeCalibration } from '../services/gazeCalibration';
@@ -7,12 +7,10 @@ import { gazeCalibration } from '../services/gazeCalibration';
 const WASM_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm';
 const FACE_MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
-const GESTURE_MODEL_URL =
-  'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task';
 
 export interface UseVisionPerceptionOptions {
   enabled: boolean;
-  forcedGaze?: Point2D | null; // For calibration studio reference gaze
+  forcedGaze?: Point2D | null;
   onAttentionUpdate?: (output: AttentionOutput) => void;
 }
 
@@ -29,12 +27,10 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const faceLandmarkerRef = useRef<FaceLandmarker | null>(null);
-  const gestureRecognizerRef = useRef<GestureRecognizer | null>(null);
   const arbitratorRef = useRef<AttentionArbitrator>(new AttentionArbitrator());
 
   const animFrameRef = useRef<number | null>(null);
   const lastFaceTimeRef = useRef<number>(0);
-  const lastGestureTimeRef = useRef<number>(0);
 
   const onAttentionUpdateRef = useRef(onAttentionUpdate);
   onAttentionUpdateRef.current = onAttentionUpdate;
@@ -42,7 +38,7 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
   const forcedGazeRef = useRef<Point2D | null>(forcedGaze);
   forcedGazeRef.current = forcedGaze;
 
-  // Initialize MediaPipe FaceLandmarker + GestureRecognizer (for Hands-Free Thumbs Up)
+  // Initialize MediaPipe FaceLandmarker with Iris Refinement (Fast GPU)
   useEffect(() => {
     let isCancelled = false;
 
@@ -55,7 +51,6 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
         const vision = await FilesetResolver.forVisionTasks(WASM_CDN);
         if (isCancelled) return;
 
-        // Load FaceLandmarker
         const faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
           baseOptions: {
             modelAssetPath: FACE_MODEL_URL,
@@ -69,29 +64,11 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
 
         if (isCancelled) return;
         faceLandmarkerRef.current = faceLandmarker;
-
-        // Load GestureRecognizer for live Thumbs Up detection
-        try {
-          const gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
-            baseOptions: {
-              modelAssetPath: GESTURE_MODEL_URL,
-              delegate: 'GPU',
-            },
-            runningMode: 'VIDEO',
-            numHands: 1,
-          });
-          if (!isCancelled) {
-            gestureRecognizerRef.current = gestureRecognizer;
-          }
-        } catch (gErr) {
-          console.warn('[Vision] GestureRecognizer optional load warning:', gErr);
-        }
-
         setIsReady(true);
         setIsLoading(false);
       } catch (err: unknown) {
         if (!isCancelled) {
-          console.error('[Vision] Failed to initialize MediaPipe Vision Tasks:', err);
+          console.error('[Vision] Failed to initialize MediaPipe FaceLandmarker:', err);
           setError(err instanceof Error ? err.message : 'Failed to load eye tracking model');
           setIsLoading(false);
         }
@@ -164,7 +141,7 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
     };
   }, [enabled, isReady, startCamera, stopCamera]);
 
-  // Main High-Precision Eye Tracking Loop with Centric Gaze & Gesture Recognition
+  // High-Speed Robust Eye Tracking Loop (Direct Spatial Tracking)
   useEffect(() => {
     if (!cameraActive || !isReady) return;
 
@@ -176,7 +153,7 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
       const video = videoRef.current;
       const now = performance.now();
 
-      // If calibration studio is actively forcing a reference gaze, emit that directly
+      // If calibration studio is forcing a reference gaze, emit that directly
       if (forcedGazeRef.current) {
         const output: AttentionOutput = {
           state: 'EYES_LOCKED',
@@ -194,80 +171,53 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
       if (video && video.readyState >= 2 && !video.paused) {
         const targets: VisionTarget[] = [];
 
-        // 1. High-Precision Eye Tracking Tick (~30-60 FPS)
-        if (faceLandmarkerRef.current && now - lastFaceTimeRef.current >= 24) {
+        if (faceLandmarkerRef.current && now - lastFaceTimeRef.current >= 20) {
           lastFaceTimeRef.current = now;
           try {
             const faceResult = faceLandmarkerRef.current.detectForVideo(video, now);
             if (faceResult.faceLandmarks && faceResult.faceLandmarks.length > 0) {
               const landmarks = faceResult.faceLandmarks[0];
 
+              // Iris Landmarks: 468 (Left Iris), 473 (Right Iris)
+              // Nose Bridge Anchor: 168
               const hasIris = landmarks.length >= 478;
 
               if (hasIris) {
                 const leftIris = landmarks[468];
                 const rightIris = landmarks[473];
+                const noseBridge = landmarks[168] || {
+                  x: (leftIris.x + rightIris.x) / 2,
+                  y: (leftIris.y + rightIris.y) / 2,
+                };
 
-                const leftEyeWidth = Math.abs(landmarks[133].x - landmarks[33].x) || 0.01;
-                const leftEyeHeight = Math.abs(landmarks[145].y - landmarks[159].y) || 0.01;
+                // Exact physical pupil midpoint in camera frustum [0, 1]
+                const pupilMidX = (leftIris.x + rightIris.x) * 0.4 + noseBridge.x * 0.2;
+                const pupilMidY = (leftIris.y + rightIris.y) * 0.4 + noseBridge.y * 0.2;
 
-                const rightEyeWidth = Math.abs(landmarks[263].x - landmarks[362].x) || 0.01;
-                const rightEyeHeight = Math.abs(landmarks[374].y - landmarks[386].y) || 0.01;
+                setCurrentPupilCamera({ x: pupilMidX, y: pupilMidY });
 
-                const leftEAR = leftEyeHeight / leftEyeWidth;
-                const rightEAR = rightEyeHeight / rightEyeWidth;
-                const isEyesOpen = leftEAR > 0.10 && rightEAR > 0.10;
+                // Apply Direct Correct Spatial Mapping
+                const calibratedGaze = gazeCalibration.mapCameraToScreenGaze({
+                  x: pupilMidX,
+                  y: pupilMidY,
+                });
 
-                if (isEyesOpen && leftIris && rightIris) {
-                  // Physical 3D pupil midpoint in camera frame [0, 1]
-                  const pupilMidX = (leftIris.x + rightIris.x) / 2;
-                  const pupilMidY = (leftIris.y + rightIris.y) / 2;
-
-                  setCurrentPupilCamera({ x: pupilMidX, y: pupilMidY });
-
-                  // Apply Ground-Truth Piecewise Calibration Mapping
-                  const calibratedGaze = gazeCalibration.mapCameraToScreenGaze({
-                    x: pupilMidX,
-                    y: pupilMidY,
-                  });
-
-                  targets.push({
-                    source: 'iris',
-                    point: calibratedGaze,
-                    confidence: 0.99,
-                    timestamp: now,
-                    metadata: {
-                      irisLeft: { x: leftIris.x, y: leftIris.y },
-                      irisRight: { x: rightIris.x, y: rightIris.y },
-                      earLeft: leftEAR,
-                      earRight: rightEAR,
-                    },
-                  });
-                }
+                targets.push({
+                  source: 'iris',
+                  point: calibratedGaze,
+                  confidence: 0.99,
+                  timestamp: now,
+                  metadata: {
+                    irisLeft: { x: leftIris.x, y: leftIris.y },
+                    irisRight: { x: rightIris.x, y: rightIris.y },
+                  },
+                });
               }
             } else {
               setCurrentPupilCamera(null);
             }
           } catch (fErr) {
-            console.warn('[Vision] Eye tracking tick error:', fErr);
-          }
-        }
-
-        // 2. Gesture Recognition Tick for Thumbs Up (~15-20 FPS)
-        if (gestureRecognizerRef.current && now - lastGestureTimeRef.current >= 50) {
-          lastGestureTimeRef.current = now;
-          try {
-            const gestureResult = gestureRecognizerRef.current.recognizeForVideo(video, now);
-            let thumbFound = false;
-            if (gestureResult.gestures && gestureResult.gestures.length > 0) {
-              const topGesture = gestureResult.gestures[0][0];
-              if (topGesture && topGesture.categoryName === 'Thumb_Up' && topGesture.score > 0.60) {
-                thumbFound = true;
-              }
-            }
-            setIsThumbUp(thumbFound);
-          } catch (gErr) {
-            // ignore frame skip
+            console.warn('[Vision] Detection tick error:', fErr);
           }
         }
 

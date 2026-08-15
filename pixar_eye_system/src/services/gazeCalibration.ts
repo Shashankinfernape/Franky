@@ -1,8 +1,8 @@
 import type { Point2D } from '../types/vision';
 
 export interface CalibrationPoint {
-  screenGaze: Point2D; // Known screen gaze where Franky was looking
-  pupilCamera: Point2D; // Measured user pupil position in camera frame [0, 1]
+  screenGaze: Point2D;
+  pupilCamera: Point2D;
 }
 
 export interface CalibrationProfile {
@@ -15,31 +15,30 @@ export interface CalibrationProfile {
   down: CalibrationPoint;
 }
 
-const STORAGE_KEY = 'franky_eye_calibration_v6';
+const STORAGE_KEY = 'franky_eye_calibration_v7';
 
-// Default fallback calibration
 const DEFAULT_PROFILE: CalibrationProfile = {
   id: 'default',
   timestamp: Date.now(),
   center: {
     screenGaze: { x: 0.0, y: 0.0 },
-    pupilCamera: { x: 0.50, y: 0.44 },
+    pupilCamera: { x: 0.50, y: 0.40 },
   },
   right: {
-    screenGaze: { x: 0.50, y: 0.0 },
-    pupilCamera: { x: 0.32, y: 0.44 },
+    screenGaze: { x: 0.35, y: 0.0 },
+    pupilCamera: { x: 0.70, y: 0.40 },
   },
   left: {
-    screenGaze: { x: -0.50, y: 0.0 },
-    pupilCamera: { x: 0.68, y: 0.44 },
+    screenGaze: { x: -0.35, y: 0.0 },
+    pupilCamera: { x: 0.30, y: 0.40 },
   },
   up: {
-    screenGaze: { x: 0.0, y: -0.40 },
-    pupilCamera: { x: 0.50, y: 0.30 },
+    screenGaze: { x: 0.0, y: -0.25 },
+    pupilCamera: { x: 0.50, y: 0.25 },
   },
   down: {
-    screenGaze: { x: 0.0, y: 0.35 },
-    pupilCamera: { x: 0.50, y: 0.58 },
+    screenGaze: { x: 0.0, y: 0.25 },
+    pupilCamera: { x: 0.50, y: 0.55 },
   },
 };
 
@@ -90,54 +89,24 @@ export class GazeCalibrationManager {
   }
 
   /**
-   * Direct Linear & Responsive Mapping
-   * Maps measured camera pupil coordinates (u, v) [0, 1] directly to screen gaze [-1, 1]
+   * Direct, Correct Spatial Mapping
+   * When face is on Camera Left (u < 0.5), Gaze points Screen Left (gazeX < 0)
+   * When face is on Camera Right (u > 0.5), Gaze points Screen Right (gazeX > 0)
    */
   mapCameraToScreenGaze(rawPupil: Point2D): Point2D {
-    const { center, right, left, up, down } = this.profile;
-
     const u = rawPupil.x;
     const v = rawPupil.y;
 
-    const uCenter = center.pupilCamera.x;
-    const vCenter = center.pupilCamera.y;
+    const uCenter = this.profile.center.pupilCamera.x || 0.50;
+    const vCenter = this.profile.center.pupilCamera.y || 0.40;
 
-    let gazeX = 0;
-    let gazeY = 0;
-
-    // Horizontal Mapping:
-    // When u < uCenter (camera left -> user is on Screen Right)
-    // When u > uCenter (camera right -> user is on Screen Left)
-    const du = u - uCenter;
-    if (Math.abs(du) > 0.008) {
-      if (du < 0) {
-        const span = Math.abs(right.pupilCamera.x - uCenter) || 0.18;
-        const t = Math.min(1.0, -du / span);
-        gazeX = t * right.screenGaze.x;
-      } else {
-        const span = Math.abs(left.pupilCamera.x - uCenter) || 0.18;
-        const t = Math.min(1.0, du / span);
-        gazeX = t * left.screenGaze.x;
-      }
-    }
-
-    // Vertical Mapping:
-    const dv = v - vCenter;
-    if (Math.abs(dv) > 0.008) {
-      if (dv < 0) {
-        const span = Math.abs(vCenter - up.pupilCamera.y) || 0.14;
-        const t = Math.min(1.0, -dv / span);
-        gazeY = t * up.screenGaze.y;
-      } else {
-        const span = Math.abs(down.pupilCamera.y - vCenter) || 0.14;
-        const t = Math.min(1.0, dv / span);
-        gazeY = t * down.screenGaze.y;
-      }
-    }
+    // Linear Proportional Gain (1.8x)
+    const rawGazeX = (u - uCenter) * 1.8;
+    const rawGazeY = (v - vCenter) * 1.8;
 
     return {
-      x: Math.max(-1.0, Math.min(1.0, gazeX)),
-      y: Math.max(-1.0, Math.min(1.0, gazeY)),
+      x: Math.max(-1.0, Math.min(1.0, rawGazeX)),
+      y: Math.max(-1.0, Math.min(1.0, rawGazeY)),
     };
   }
 }
