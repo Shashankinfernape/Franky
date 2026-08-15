@@ -31,8 +31,8 @@ export type CalibrationStep =
 interface CalibrationStudioProps {
   isOpen: boolean;
   onClose: () => void;
-  currentPupilCamera: Point2D | null; // Live pupil position in camera frame [0, 1]
-  calibrationGaze: Point2D | null; // Live position from full-screen swipe/drag
+  currentPupilCamera: Point2D | null;
+  calibrationGaze: Point2D | null;
   onSetCalibrationGaze: (gaze: Point2D | null) => void;
   onSpeak?: (text: string) => void;
 }
@@ -67,7 +67,7 @@ const STEP_CONFIGS: Record<
     title: '2/5: Stand on RIGHT',
     instruction:
       'Step to the RIGHT of camera. Swipe screen until McQueen looks directly at you ➔ Tap Lock.',
-    defaultGaze: { x: 0.35, y: 0.0 },
+    defaultGaze: { x: 0.50, y: 0.0 },
     icon: <ArrowRight className="w-4 h-4 text-emerald-400" />,
     voicePrompt: "Step to your right, swipe my eyes to look at you, and tap Lock!",
   },
@@ -75,7 +75,7 @@ const STEP_CONFIGS: Record<
     title: '3/5: Stand on LEFT',
     instruction:
       'Step to the LEFT of camera. Swipe screen until McQueen looks directly at you ➔ Tap Lock.',
-    defaultGaze: { x: -0.35, y: 0.0 },
+    defaultGaze: { x: -0.50, y: 0.0 },
     icon: <ArrowLeft className="w-4 h-4 text-indigo-400" />,
     voicePrompt: "Step to your left, swipe my eyes to look at you, and tap Lock!",
   },
@@ -83,7 +83,7 @@ const STEP_CONFIGS: Record<
     title: '4/5: Look from ABOVE',
     instruction:
       'Stand tall or look down from above. Swipe eyes up to meet your gaze ➔ Tap Lock.',
-    defaultGaze: { x: 0.0, y: -0.25 },
+    defaultGaze: { x: 0.0, y: -0.35 },
     icon: <ArrowUp className="w-4 h-4 text-purple-400" />,
     voicePrompt: "Stand tall, swipe my eyes up to meet you, and tap Lock!",
   },
@@ -91,17 +91,17 @@ const STEP_CONFIGS: Record<
     title: '5/5: Look from BELOW',
     instruction:
       'Sit lower or crouch. Swipe eyes down to meet your gaze ➔ Tap Lock.',
-    defaultGaze: { x: 0.0, y: 0.20 },
+    defaultGaze: { x: 0.0, y: 0.30 },
     icon: <ArrowDown className="w-4 h-4 text-pink-400" />,
     voicePrompt: "Sit lower, swipe my eyes down to meet you, and tap Lock!",
   },
   complete: {
-    title: 'Calibration Locked & Saved!',
+    title: 'Calibration Locked & Active!',
     instruction:
-      'Custom trajectory profile saved! McQueen will now follow you seamlessly based on your exact locked positions!',
+      'Custom trajectory profile saved to browser! McQueen is now tracking your exact locked positions!',
     defaultGaze: { x: 0, y: 0 },
     icon: <CheckCircle2 className="w-4 h-4 text-emerald-400" />,
-    voicePrompt: "Ka-chow! Your eye positions are locked in!",
+    voicePrompt: "Ka-chow! Your custom eye trajectory is saved and active!",
   },
 };
 
@@ -175,6 +175,11 @@ export const CalibrationStudio: React.FC<CalibrationStudioProps> = ({
     });
   }, [step, calibrationGaze, currentPupilCamera, onSetCalibrationGaze]);
 
+  const handleFinish = useCallback(() => {
+    onSetCalibrationGaze(null);
+    onClose();
+  }, [onSetCalibrationGaze, onClose]);
+
   // Spacebar / Enter shortcut to lock
   useEffect(() => {
     if (!isOpen) return;
@@ -183,16 +188,16 @@ export const CalibrationStudio: React.FC<CalibrationStudioProps> = ({
       if (e.code === 'Space' || e.code === 'Enter') {
         e.preventDefault();
         if (step === 'intro') setStep('center');
-        else if (step === 'complete') onClose();
+        else if (step === 'complete') handleFinish();
         else handleCapturePoint();
       } else if (e.code === 'Escape') {
-        onClose();
+        handleFinish();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, step, handleCapturePoint, onClose]);
+  }, [isOpen, step, handleCapturePoint, handleFinish]);
 
   if (!isOpen) return null;
 
@@ -200,7 +205,7 @@ export const CalibrationStudio: React.FC<CalibrationStudioProps> = ({
   const displayGaze = calibrationGaze || currentConfig.defaultGaze;
 
   return (
-    /* Floating Top HUD Bar - Allows 100% full-screen swipe on the rest of the canvas */
+    /* Floating Top HUD Bar */
     <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[100] w-[95%] max-w-lg pointer-events-auto select-none font-sans animate-in fade-in slide-in-from-top-2">
       <div className="bg-slate-950/90 border border-white/25 rounded-2xl p-3 shadow-2xl backdrop-blur-xl text-white space-y-2">
         {/* Top Header */}
@@ -234,7 +239,7 @@ export const CalibrationStudio: React.FC<CalibrationStudioProps> = ({
             </div>
 
             <button
-              onClick={onClose}
+              onClick={handleFinish}
               className="p-1 hover:bg-white/15 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
@@ -280,10 +285,10 @@ export const CalibrationStudio: React.FC<CalibrationStudioProps> = ({
             </button>
           ) : step === 'complete' ? (
             <button
-              onClick={onClose}
-              className="w-full py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl shadow transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer text-xs"
+              onClick={handleFinish}
+              className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer text-xs border border-emerald-400/40"
             >
-              <CheckCircle2 className="w-3.5 h-3.5" />
+              <CheckCircle2 className="w-4 h-4 text-white" />
               <span>Done! Enjoy Perfect Eye Contact</span>
             </button>
           ) : (

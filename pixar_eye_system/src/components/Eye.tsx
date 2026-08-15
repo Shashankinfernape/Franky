@@ -15,17 +15,17 @@ interface EyeProps {
 // McQueen's idle gaze direction per emotion (when not face-tracking)
 const EMOTION_GAZE: Record<EmotionalState, { x: number; y: number }> = {
   neutral:     { x: 0,     y: 0     },
-  happy:       { x: 0,     y: -0.05 },
-  excited:     { x: 0,     y: -0.08 },
-  angry:       { x: 0,     y:  0.04 },
-  sad:         { x: 0.02,  y:  0.06 },
-  sleepy:      { x: 0,     y:  0.10 },
+  happy:       { x: 0,     y: -0.06 },
+  excited:     { x: 0,     y: -0.10 },
+  angry:       { x: 0,     y:  0.05 },
+  sad:         { x: 0.02,  y:  0.08 },
+  sleepy:      { x: 0,     y:  0.12 },
   focused:     { x: 0,     y:  0.02 },
-  thinking:    { x: -0.10, y: -0.06 },
-  curious:     { x: 0.08,  y: -0.05 },
-  confused:    { x: -0.05, y:  0.02 },
-  embarrassed: { x: 0.08,  y:  0.08 },
-  celebrating: { x: 0,     y: -0.10 },
+  thinking:    { x: -0.12, y: -0.08 },
+  curious:     { x: 0.10,  y: -0.06 },
+  confused:    { x: -0.06, y:  0.02 },
+  embarrassed: { x: 0.10,  y:  0.10 },
+  celebrating: { x: 0,     y: -0.12 },
   listening:   { x: 0,     y: -0.02 },
   talking:     { x: 0,     y:  0    },
 };
@@ -40,10 +40,9 @@ export const Eye: React.FC<EyeProps> = ({
 }) => {
   const eGaze = EMOTION_GAZE[emotionState] ?? { x: 0, y: 0 };
   
-  // Safe Centric Deflection (2.2vw horizontal, 1.4vw vertical)
-  // Perfectly contained within the eye socket — 100% impossible to look out of the window!
-  const bX = useTransform(gazeX, (x) => (x * 0.85 + eGaze.x * 0.15) * 2.2 + 'vw');
-  const bY = useTransform(gazeY, (y) => (y * 0.85 + eGaze.y * 0.15) * 1.4 + 'vw');
+  // Responsive, clear Pixar eye deflection (4.8vw horizontal, 2.8vw vertical)
+  const bX = useTransform(gazeX, (x) => (x * 0.85 + eGaze.x * 0.15) * 4.8 + 'vw');
+  const bY = useTransform(gazeY, (y) => (y * 0.85 + eGaze.y * 0.15) * 2.8 + 'vw');
 
   return (
     <div className="relative flex items-center justify-center pointer-events-none">
