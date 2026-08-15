@@ -184,26 +184,37 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
                 // Eye aspect ratio (open eye check)
                 const leftEAR = leftEyeHeight / leftEyeWidth;
                 const rightEAR = rightEyeHeight / rightEyeWidth;
-                const isEyesOpen = leftEAR > 0.12 && rightEAR > 0.12;
+                const isEyesOpen = leftEAR > 0.11 && rightEAR > 0.11;
 
                 if (isEyesOpen && leftIris && rightIris) {
-                  // Normalized displacement within eye socket [-1, 1]
-                  const leftOffsetX = (leftIris.x - leftEyeCenterX) / (leftEyeWidth * 0.42);
-                  const leftOffsetY = (leftIris.y - leftEyeCenterY) / (leftEyeHeight * 0.42);
+                  // 1. Physical 3D location of person relative to device camera
+                  const eyeCenterX = (leftEyeCenterX + rightEyeCenterX) / 2;
+                  const eyeCenterY = (leftEyeCenterY + rightEyeCenterY) / 2;
 
-                  const rightOffsetX = (rightIris.x - rightEyeCenterX) / (rightEyeWidth * 0.42);
-                  const rightOffsetY = (rightIris.y - rightEyeCenterY) / (rightEyeHeight * 0.42);
+                  // Screen X: when user is on the LEFT of the camera (X < 0.5), spatialX is negative (looks LEFT)
+                  // When user is on the RIGHT of the camera (X > 0.5), spatialX is positive (looks RIGHT)
+                  const spatialX = (eyeCenterX - 0.5) * 2.0;
+
+                  // Vertical Calibration: Baseline eye level in webcam is ~0.38 (slightly above middle)
+                  // When user is centered -> spatialY = 0.0 (no downward gaze bug!)
+                  const spatialY = (eyeCenterY - 0.38) * 2.2;
+
+                  // 2. Iris Pupil Offset inside eye socket
+                  const leftOffsetX = (leftIris.x - leftEyeCenterX) / (leftEyeWidth * 0.40);
+                  // Eyelid droop baseline compensation (-0.20): upper lid naturally covers top iris
+                  const leftOffsetY =
+                    (leftIris.y - leftEyeCenterY) / (leftEyeHeight * 0.40) - 0.20;
+
+                  const rightOffsetX = (rightIris.x - rightEyeCenterX) / (rightEyeWidth * 0.40);
+                  const rightOffsetY =
+                    (rightIris.y - rightEyeCenterY) / (rightEyeHeight * 0.40) - 0.20;
 
                   const avgIrisX = (leftOffsetX + rightOffsetX) / 2;
                   const avgIrisY = (leftOffsetY + rightOffsetY) / 2;
 
-                  // Eye position in webcam screen frame [-1, 1]
-                  const eyeScreenX = -((leftEyeCenterX + rightEyeCenterX) / 2 - 0.5) * 2.0;
-                  const eyeScreenY = ((leftEyeCenterY + rightEyeCenterY) / 2 - 0.5) * 2.0;
-
-                  // Calibrated Gaze Fusion: Iris displacement (65%) + Eye Screen Position (35%)
-                  const rawGazeX = -(avgIrisX * 0.65) + eyeScreenX * 0.35;
-                  const rawGazeY = avgIrisY * 0.65 + eyeScreenY * 0.35;
+                  // 3. Perfected Trajectory Fusion
+                  const rawGazeX = spatialX * 0.85 + avgIrisX * 0.40;
+                  const rawGazeY = spatialY * 0.85 + avgIrisY * 0.35;
 
                   const clampedX = Math.max(-1.0, Math.min(1.0, rawGazeX));
                   const clampedY = Math.max(-1.0, Math.min(1.0, rawGazeY));
