@@ -208,29 +208,44 @@ export const FaceScreen: React.FC = () => {
     }
   };
 
-  // Manual Pointer Override (for touching/mouse dragging on screen)
+  // Manual Pointer & Calibration Swipe Override
   const handlePointerMove = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
-      if (cameraActive || !containerRef.current) return;
+      if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
       const normX = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
       const normY = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
-      
+
+      // When calibration studio is open, touch & swipe directly aims Franky's eyes!
+      if (isCalibrationStudioOpen) {
+        setCalibrationForcedGaze({ x: normX, y: normY });
+        return;
+      }
+
+      if (cameraActive) return;
       const isTouch = e.pointerType === 'touch' || e.pointerType === 'pen';
       setGaze({ x: normX, y: normY }, isTouch);
     },
-    [cameraActive, setGaze]
+    [isCalibrationStudioOpen, cameraActive, setGaze]
+  );
+
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      handlePointerMove(e);
+    },
+    [handlePointerMove]
   );
 
   const handlePointerUp = useCallback(() => {
-    if (!cameraActive) {
+    if (!isCalibrationStudioOpen && !cameraActive) {
       releaseGaze();
     }
-  }, [cameraActive, releaseGaze]);
+  }, [isCalibrationStudioOpen, cameraActive, releaseGaze]);
 
   return (
     <div
       ref={containerRef}
+      onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
@@ -294,6 +309,7 @@ export const FaceScreen: React.FC = () => {
           setCalibrationForcedGaze(null);
         }}
         currentPupilCamera={currentPupilCamera}
+        calibrationGaze={calibrationForcedGaze}
         onSetCalibrationGaze={setCalibrationForcedGaze}
         onSpeak={(text) => streamLocalFallback(text, true)}
       />

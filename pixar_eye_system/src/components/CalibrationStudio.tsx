@@ -16,6 +16,7 @@ import {
   ArrowUp,
   ArrowDown,
   Sparkles,
+  Move,
 } from 'lucide-react';
 
 export type CalibrationStep =
@@ -31,7 +32,8 @@ interface CalibrationStudioProps {
   isOpen: boolean;
   onClose: () => void;
   currentPupilCamera: Point2D | null; // Live pupil position in camera frame [0, 1]
-  onSetCalibrationGaze: (gaze: Point2D | null) => void; // Drives Franky's eyes to user's dragged position
+  calibrationGaze: Point2D | null; // Live position from full-screen swipe/drag
+  onSetCalibrationGaze: (gaze: Point2D | null) => void;
   onSpeak?: (text: string) => void;
 }
 
@@ -46,60 +48,60 @@ const STEP_CONFIGS: Record<
   }
 > = {
   intro: {
-    title: 'Interactive Drag & Lock Calibration',
+    title: 'Swipe & Lock Calibration',
     instruction:
-      'In each step, stand in position, DRAG McQueen’s eyes on screen until he looks 100% directly into your eyes, then tap Lock!',
+      'Swipe anywhere on the screen with your finger to aim McQueen’s pupils directly at your eyes, then tap Lock!',
     defaultGaze: { x: 0, y: 0 },
     icon: <Sparkles className="w-4 h-4 text-amber-400" />,
-    voicePrompt: "Let's calibrate! Drag my eyes so I'm looking straight at you, then lock it in!",
+    voicePrompt: "Swipe anywhere on screen to point my eyes at you, and tap lock!",
   },
   center: {
     title: '1/5: Center Position',
     instruction:
-      'Stay in the CENTER. Drag eyes / use arrows until McQueen looks dead into your eyes, then tap Lock.',
+      'Sit in the CENTER. Swipe on screen until McQueen looks dead into your eyes ➔ Tap Lock.',
     defaultGaze: { x: 0.0, y: 0.0 },
     icon: <Target className="w-4 h-4 text-cyan-400 animate-pulse" />,
-    voicePrompt: "Look at me from the center, drag my eyes so I'm looking at you, and tap Lock!",
+    voicePrompt: "Swipe on screen so I'm looking straight at you, then tap Lock!",
   },
   right: {
     title: '2/5: Stand on RIGHT',
     instruction:
-      'Step to the RIGHT of camera. Drag McQueen’s eyes until he looks straight into your eyes on the right, then tap Lock.',
-    defaultGaze: { x: 0.40, y: 0.0 },
+      'Step to the RIGHT of camera. Swipe screen until McQueen looks directly at you ➔ Tap Lock.',
+    defaultGaze: { x: 0.35, y: 0.0 },
     icon: <ArrowRight className="w-4 h-4 text-emerald-400" />,
-    voicePrompt: "Now step to your right, drag my eyes to look at you, and tap Lock!",
+    voicePrompt: "Step to your right, swipe my eyes to look at you, and tap Lock!",
   },
   left: {
     title: '3/5: Stand on LEFT',
     instruction:
-      'Step to the LEFT of camera. Drag McQueen’s eyes until he looks straight into your eyes on the left, then tap Lock.',
-    defaultGaze: { x: -0.40, y: 0.0 },
+      'Step to the LEFT of camera. Swipe screen until McQueen looks directly at you ➔ Tap Lock.',
+    defaultGaze: { x: -0.35, y: 0.0 },
     icon: <ArrowLeft className="w-4 h-4 text-indigo-400" />,
-    voicePrompt: "Now step to your left, drag my eyes to look at you, and tap Lock!",
+    voicePrompt: "Step to your left, swipe my eyes to look at you, and tap Lock!",
   },
   up: {
     title: '4/5: Look from ABOVE',
     instruction:
-      'Stand tall or look down at the screen. Drag McQueen’s eyes up until he looks up at you, then tap Lock.',
-    defaultGaze: { x: 0.0, y: -0.30 },
+      'Stand tall or look down from above. Swipe eyes up to meet your gaze ➔ Tap Lock.',
+    defaultGaze: { x: 0.0, y: -0.25 },
     icon: <ArrowUp className="w-4 h-4 text-purple-400" />,
-    voicePrompt: "Stand tall or look from above, drag my eyes up to meet you, and tap Lock!",
+    voicePrompt: "Stand tall, swipe my eyes up to meet you, and tap Lock!",
   },
   down: {
     title: '5/5: Look from BELOW',
     instruction:
-      'Sit lower or crouch. Drag McQueen’s eyes down until he looks down at you, then tap Lock.',
-    defaultGaze: { x: 0.0, y: 0.25 },
+      'Sit lower or crouch. Swipe eyes down to meet your gaze ➔ Tap Lock.',
+    defaultGaze: { x: 0.0, y: 0.20 },
     icon: <ArrowDown className="w-4 h-4 text-pink-400" />,
-    voicePrompt: "Almost done! Sit lower, drag my eyes down to meet you, and tap Lock!",
+    voicePrompt: "Sit lower, swipe my eyes down to meet you, and tap Lock!",
   },
   complete: {
     title: 'Calibration Locked & Saved!',
     instruction:
-      'Ground-truth trajectory profile generated from your exact manual locks. McQueen will now follow you with 100% precision!',
+      'Custom trajectory profile saved! McQueen will now follow you seamlessly based on your exact locked positions!',
     defaultGaze: { x: 0, y: 0 },
     icon: <CheckCircle2 className="w-4 h-4 text-emerald-400" />,
-    voicePrompt: "Ka-chow! Your custom eye positions are locked in!",
+    voicePrompt: "Ka-chow! Your eye positions are locked in!",
   },
 };
 
@@ -107,34 +109,22 @@ export const CalibrationStudio: React.FC<CalibrationStudioProps> = ({
   isOpen,
   onClose,
   currentPupilCamera,
+  calibrationGaze,
   onSetCalibrationGaze,
   onSpeak,
 }) => {
   const [step, setStep] = useState<CalibrationStep>('intro');
-  const [currentGaze, setCurrentGaze] = useState<Point2D>({ x: 0, y: 0 });
   const [recordedPoints, setRecordedPoints] = useState<Partial<CalibrationProfile>>({});
   const [isLockedAnimation, setIsLockedAnimation] = useState(false);
 
-  // Sync current dragged gaze with Franky's eyes
+  // Set default starting gaze position when step changes
   useEffect(() => {
-    if (!isOpen) {
-      onSetCalibrationGaze(null);
-      return;
-    }
-
-    if (step !== 'intro' && step !== 'complete') {
-      onSetCalibrationGaze(currentGaze);
-    } else {
+    if (isOpen && step !== 'intro' && step !== 'complete') {
+      onSetCalibrationGaze(STEP_CONFIGS[step].defaultGaze);
+    } else if (!isOpen) {
       onSetCalibrationGaze(null);
     }
-  }, [isOpen, step, currentGaze, onSetCalibrationGaze]);
-
-  // Reset gaze to default suggestion when entering a new step
-  useEffect(() => {
-    if (step !== 'intro' && step !== 'complete') {
-      setCurrentGaze(STEP_CONFIGS[step].defaultGaze);
-    }
-  }, [step]);
+  }, [isOpen, step, onSetCalibrationGaze]);
 
   // Voice guidance prompt per step
   useEffect(() => {
@@ -143,22 +133,15 @@ export const CalibrationStudio: React.FC<CalibrationStudioProps> = ({
     }
   }, [isOpen, step, onSpeak]);
 
-  // Nudge functions (0.05 step)
-  const nudge = useCallback((dx: number, dy: number) => {
-    setCurrentGaze((prev) => ({
-      x: Math.max(-1.0, Math.min(1.0, prev.x + dx)),
-      y: Math.max(-1.0, Math.min(1.0, prev.y + dy)),
-    }));
-  }, []);
-
   const handleCapturePoint = useCallback(() => {
     if (!currentPupilCamera) {
-      alert('Camera is searching for eyes. Make sure your face is visible in the webcam!');
+      alert('Camera is searching for eyes. Make sure your face is visible in the camera frame!');
       return;
     }
 
+    const activeGaze = calibrationGaze || STEP_CONFIGS[step].defaultGaze;
     const point: CalibrationPoint = {
-      screenGaze: { ...currentGaze },
+      screenGaze: { ...activeGaze },
       pupilCamera: { ...currentPupilCamera },
     };
 
@@ -175,7 +158,7 @@ export const CalibrationStudio: React.FC<CalibrationStudioProps> = ({
       else if (step === 'up') setStep('down');
       else if (step === 'down') {
         const finalProfile: CalibrationProfile = {
-          id: 'custom_drag_' + Date.now(),
+          id: 'custom_swipe_' + Date.now(),
           timestamp: Date.now(),
           center: updated.center || point,
           right: updated.right || point,
@@ -189,26 +172,14 @@ export const CalibrationStudio: React.FC<CalibrationStudioProps> = ({
 
       return updated;
     });
-  }, [step, currentGaze, currentPupilCamera]);
+  }, [step, calibrationGaze, currentPupilCamera]);
 
-  // Keyboard arrow keys for precision nudging + Space for lock
+  // Spacebar / Enter shortcut to lock
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'ArrowLeft') {
-        e.preventDefault();
-        nudge(-0.04, 0);
-      } else if (e.code === 'ArrowRight') {
-        e.preventDefault();
-        nudge(0.04, 0);
-      } else if (e.code === 'ArrowUp') {
-        e.preventDefault();
-        nudge(0, -0.04);
-      } else if (e.code === 'ArrowDown') {
-        e.preventDefault();
-        nudge(0, 0.04);
-      } else if (e.code === 'Space' || e.code === 'Enter') {
+      if (e.code === 'Space' || e.code === 'Enter') {
         e.preventDefault();
         if (step === 'intro') setStep('center');
         else if (step === 'complete') onClose();
@@ -220,16 +191,17 @@ export const CalibrationStudio: React.FC<CalibrationStudioProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, step, nudge, handleCapturePoint, onClose]);
+  }, [isOpen, step, handleCapturePoint, onClose]);
 
   if (!isOpen) return null;
 
   const currentConfig = STEP_CONFIGS[step];
+  const displayGaze = calibrationGaze || currentConfig.defaultGaze;
 
   return (
-    /* Floating Top HUD - 100% Unobscured Eyes in Center */
+    /* Floating Top HUD Bar - Allows 100% full-screen swipe on the rest of the canvas */
     <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[100] w-[95%] max-w-lg pointer-events-auto select-none font-sans animate-in fade-in slide-in-from-top-2">
-      <div className="bg-slate-950/90 border border-white/25 rounded-2xl p-3 shadow-2xl backdrop-blur-xl text-white space-y-2.5">
+      <div className="bg-slate-950/90 border border-white/25 rounded-2xl p-3 shadow-2xl backdrop-blur-xl text-white space-y-2">
         {/* Top Header */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
@@ -270,62 +242,27 @@ export const CalibrationStudio: React.FC<CalibrationStudioProps> = ({
         </div>
 
         {/* Instruction Banner */}
-        <p className="text-[11px] text-slate-200 leading-snug">
-          {currentConfig.instruction}
-        </p>
+        <div className="flex items-center gap-2 text-[11px] text-slate-200">
+          <Move className="w-3.5 h-3.5 text-cyan-400 shrink-0 animate-pulse" />
+          <span>{currentConfig.instruction}</span>
+        </div>
 
-        {/* Interactive Gaze Nudge D-Pad & Camera Status */}
+        {/* Camera Status Feedback */}
         {step !== 'intro' && step !== 'complete' && (
-          <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/10">
-            {/* Camera Status */}
-            <div className="flex flex-col gap-0.5 text-[10px] font-mono">
-              <div className="flex items-center gap-1.5">
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    currentPupilCamera ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'
-                  }`}
-                />
-                <span className={currentPupilCamera ? 'text-emerald-300' : 'text-rose-400'}>
-                  {currentPupilCamera ? 'Eyes Detected ✓' : 'Face not visible'}
-                </span>
-              </div>
-              <div className="text-slate-400 text-[9px]">
-                Gaze (X:{currentGaze.x.toFixed(2)}, Y:{currentGaze.y.toFixed(2)})
-              </div>
+          <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/10 text-[10px] font-mono">
+            <div className="flex items-center gap-1.5">
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  currentPupilCamera ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'
+                }`}
+              />
+              <span className={currentPupilCamera ? 'text-emerald-300' : 'text-rose-400'}>
+                {currentPupilCamera ? 'Face Detected ✓' : 'Face not visible'}
+              </span>
             </div>
 
-            {/* Directional Nudge D-Pad Buttons */}
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => nudge(-0.06, 0)}
-                title="Nudge Left"
-                className="p-1.5 bg-slate-800 hover:bg-slate-700 active:scale-90 rounded-lg text-slate-200 border border-white/10"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-              </button>
-              <div className="flex flex-col gap-1">
-                <button
-                  onClick={() => nudge(0, -0.06)}
-                  title="Nudge Up"
-                  className="p-1.5 bg-slate-800 hover:bg-slate-700 active:scale-90 rounded-lg text-slate-200 border border-white/10"
-                >
-                  <ArrowUp className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => nudge(0, 0.06)}
-                  title="Nudge Down"
-                  className="p-1.5 bg-slate-800 hover:bg-slate-700 active:scale-90 rounded-lg text-slate-200 border border-white/10"
-                >
-                  <ArrowDown className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              <button
-                onClick={() => nudge(0.06, 0)}
-                title="Nudge Right"
-                className="p-1.5 bg-slate-800 hover:bg-slate-700 active:scale-90 rounded-lg text-slate-200 border border-white/10"
-              >
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+            <div className="text-slate-400 text-[9px]">
+              Pupil Gaze: (X:{displayGaze.x.toFixed(2)}, Y:{displayGaze.y.toFixed(2)})
             </div>
           </div>
         )}
@@ -337,7 +274,7 @@ export const CalibrationStudio: React.FC<CalibrationStudioProps> = ({
               onClick={() => setStep('center')}
               className="w-full py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold rounded-xl shadow transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer text-xs"
             >
-              <span>Begin Drag & Lock</span>
+              <span>Begin Swipe & Lock</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           ) : step === 'complete' ? (
@@ -352,18 +289,18 @@ export const CalibrationStudio: React.FC<CalibrationStudioProps> = ({
             <>
               <button
                 onClick={handleCapturePoint}
-                className={`flex-1 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer text-xs border border-emerald-400/30 ${
+                className={`flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer text-xs border border-emerald-400/30 ${
                   isLockedAnimation ? 'ring-2 ring-emerald-400 scale-105' : ''
                 }`}
               >
-                <Lock className="w-3.5 h-3.5 text-yellow-300" />
+                <Lock className="w-4 h-4 text-yellow-300" />
                 <span>🔒 Lock This Position & Next</span>
               </button>
 
               <button
-                onClick={() => setCurrentGaze(STEP_CONFIGS[step].defaultGaze)}
+                onClick={() => onSetCalibrationGaze(STEP_CONFIGS[step].defaultGaze)}
                 title="Reset Position"
-                className="p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-slate-400 hover:text-white transition-all active:scale-95 cursor-pointer"
+                className="p-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-slate-400 hover:text-white transition-all active:scale-95 cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
