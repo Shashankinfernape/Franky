@@ -168,6 +168,7 @@ export const CalibrationStudio: React.FC<CalibrationStudioProps> = ({
         const finalProfile: CalibrationProfile = {
           id: 'custom_' + Date.now(),
           timestamp: Date.now(),
+          invertX: gazeCalibration.getProfile().invertX,
           center: updated.center || point,
           right: updated.right || point,
           left: updated.left || point,

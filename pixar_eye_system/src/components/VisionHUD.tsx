@@ -1,6 +1,6 @@
 import React from 'react';
 import type { AttentionOutput } from '../types/vision';
-import { Eye, ShieldAlert, EyeOff, Target, Sparkles } from 'lucide-react';
+import { Eye, ShieldAlert, EyeOff, Target, Sparkles, ArrowLeftRight } from 'lucide-react';
 
 interface VisionHUDProps {
   attentionData: AttentionOutput | null;
@@ -11,6 +11,7 @@ interface VisionHUDProps {
   onToggleOpen: () => void;
   onRecalibrate?: () => void;
   onOpenCalibrationStudio?: () => void;
+  onToggleInvertX?: () => void;
 }
 
 export const VisionHUD: React.FC<VisionHUDProps> = ({
@@ -22,6 +23,7 @@ export const VisionHUD: React.FC<VisionHUDProps> = ({
   onToggleOpen,
   onRecalibrate,
   onOpenCalibrationStudio,
+  onToggleInvertX,
 }) => {
   if (!cameraActive && !isLoading && !error) return null;
 
@@ -123,6 +125,16 @@ export const VisionHUD: React.FC<VisionHUDProps> = ({
             </div>
 
             <div className="flex flex-col gap-1.5 pt-1">
+              {onToggleInvertX && (
+                <button
+                  onClick={onToggleInvertX}
+                  className="w-full py-1.5 px-2 bg-slate-800 hover:bg-slate-700 border border-white/15 text-cyan-300 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow"
+                >
+                  <ArrowLeftRight className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Flip Left / Right Direction</span>
+                </button>
+              )}
+
               {onOpenCalibrationStudio && (
                 <button
                   onClick={onOpenCalibrationStudio}
