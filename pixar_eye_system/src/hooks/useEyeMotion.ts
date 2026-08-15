@@ -41,7 +41,7 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
   const isUserInteractingRef = useRef(false);
   const isTouchRef = useRef(false);
 
-  // Micro-Saccades & Idle Lookaround Generator (Calm, 1-2px gentle drift)
+  // Micro-Saccades (Subtle physiological fixations, 1-2px)
   useEffect(() => {
     let saccadeTimer: ReturnType<typeof setTimeout> | null = null;
     let idleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -49,12 +49,11 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
     const scheduleSaccade = () => {
       if (!enableMicroSaccades) return;
 
-      const delay = (2500 + Math.random() * 3000) / saccadeSpeedMultiplier;
+      const delay = (2000 + Math.random() * 2500) / saccadeSpeedMultiplier;
       saccadeTimer = setTimeout(() => {
-        // Ultra-subtle micro fixation drift (max 0.015)
         microOffsetRef.current = {
-          x: (Math.random() - 0.5) * 0.015,
-          y: (Math.random() - 0.5) * 0.010,
+          x: (Math.random() - 0.5) * 0.018,
+          y: (Math.random() - 0.5) * 0.012,
         };
         scheduleSaccade();
       }, delay);
@@ -65,21 +64,21 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
 
       idleTimer = setTimeout(() => {
         const timeSinceUser = Date.now() - lastUserInteractionTime.current;
-        if (timeSinceUser > 5000) {
+        if (timeSinceUser > 4000) {
           isUserInteractingRef.current = false;
           isTouchRef.current = false;
           const idleTargets: GazePoint[] = [
-            { x: 0.15, y: -0.05 },
-            { x: -0.15, y: -0.04 },
-            { x: 0.08, y: 0.10 },
-            { x: -0.08, y: 0.08 },
+            { x: 0.18, y: -0.06 },
+            { x: -0.18, y: -0.05 },
+            { x: 0.10, y: 0.12 },
+            { x: -0.10, y: 0.10 },
             { x: 0, y: 0 },
           ];
           const randomPick = idleTargets[Math.floor(Math.random() * idleTargets.length)];
           targetRef.current = randomPick;
         }
         scheduleIdleLook();
-      }, 5000 + Math.random() * 3000);
+      }, 4500 + Math.random() * 2500);
     };
 
     scheduleSaccade();
@@ -91,18 +90,18 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
     };
   }, [enableMicroSaccades, enableIdleLookAround, saccadeSpeedMultiplier]);
 
-  // 60 FPS Cinematic Slow-Glide Physics Loop
+  // 60 FPS Responsive Natural Pixar Spring Engine
   useEffect(() => {
     let animFrameId: number;
     let lastFrameTime = performance.now();
 
     const updatePhysics = (now: number) => {
-      const dt = Math.min(0.05, Math.max(0.001, (now - lastFrameTime) / 1000));
+      const dt = Math.min(0.04, Math.max(0.001, (now - lastFrameTime) / 1000));
       lastFrameTime = now;
 
-      // Organic Breathing Rhythm (0.2 Hz sinusoidal drift)
-      const breathingY = enableBreathing ? Math.sin(now * 0.0012) * 0.006 : 0;
-      const breathingX = enableBreathing ? Math.cos(now * 0.0006) * 0.003 : 0;
+      // Breathing Rhythm (0.2 Hz sinusoidal drift)
+      const breathingY = enableBreathing ? Math.sin(now * 0.0015) * 0.006 : 0;
+      const breathingX = enableBreathing ? Math.cos(now * 0.0008) * 0.003 : 0;
 
       // Desired target + micro offsets + breathing
       const finalTargetX = targetRef.current.x + microOffsetRef.current.x + breathingX;
@@ -115,9 +114,9 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
         velocityRef.current.x = 0;
         velocityRef.current.y = 0;
       } else {
-        // Cinematic Critically-Damped Spring Dynamics (Slow, weighted, organic eye glides)
-        const stiffness = 85.0; // Gentle spring pull
-        const damping = 18.5; // High damping: eliminates twitching, snapping, and overshoot
+        // Balanced Pixar Spring Parameters (Snappy ~150ms eye tracking with zero drag)
+        const stiffness = 220.0; // Responsive tracking speed
+        const damping = 22.0;    // Perfectly damped: no overshoot, crisp stop
 
         // Spring acceleration
         const forceX = (finalTargetX - gazeRef.current.x) * stiffness;
@@ -127,12 +126,12 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
         velocityRef.current.x += forceX * dt;
         velocityRef.current.y += forceY * dt;
 
-        // Apply viscous drag
+        // Viscous damping
         velocityRef.current.x *= Math.max(0, 1 - damping * dt);
         velocityRef.current.y *= Math.max(0, 1 - damping * dt);
 
-        // Velocity speed cap (Prevents wild snapping across screen)
-        const maxSpeed = 1.6; // units per second
+        // Speed cap for safety
+        const maxSpeed = 5.0; // Responsive speed limit
         const currentSpeed = Math.sqrt(
           velocityRef.current.x * velocityRef.current.x +
           velocityRef.current.y * velocityRef.current.y
@@ -149,8 +148,8 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
       }
 
       // Parallax Highlight calculation
-      const pX = -gazeRef.current.x * 8;
-      const pY = -gazeRef.current.y * 5;
+      const pX = -gazeRef.current.x * 10;
+      const pY = -gazeRef.current.y * 6;
 
       // Direct write to Framer Motion values
       gazeX.set(gazeRef.current.x);

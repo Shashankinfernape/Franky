@@ -15,9 +15,9 @@ export interface CalibrationProfile {
   down: CalibrationPoint;
 }
 
-const STORAGE_KEY = 'franky_eye_calibration_v5';
+const STORAGE_KEY = 'franky_eye_calibration_v6';
 
-// Default fallback calibration (gentle natural FOV)
+// Default fallback calibration
 const DEFAULT_PROFILE: CalibrationProfile = {
   id: 'default',
   timestamp: Date.now(),
@@ -26,20 +26,20 @@ const DEFAULT_PROFILE: CalibrationProfile = {
     pupilCamera: { x: 0.50, y: 0.44 },
   },
   right: {
-    screenGaze: { x: 0.22, y: 0.0 },
+    screenGaze: { x: 0.50, y: 0.0 },
     pupilCamera: { x: 0.32, y: 0.44 },
   },
   left: {
-    screenGaze: { x: -0.22, y: 0.0 },
+    screenGaze: { x: -0.50, y: 0.0 },
     pupilCamera: { x: 0.68, y: 0.44 },
   },
   up: {
-    screenGaze: { x: 0.0, y: -0.18 },
-    pupilCamera: { x: 0.50, y: 0.32 },
+    screenGaze: { x: 0.0, y: -0.40 },
+    pupilCamera: { x: 0.50, y: 0.30 },
   },
   down: {
-    screenGaze: { x: 0.0, y: 0.15 },
-    pupilCamera: { x: 0.50, y: 0.56 },
+    screenGaze: { x: 0.0, y: 0.35 },
+    pupilCamera: { x: 0.50, y: 0.58 },
   },
 };
 
@@ -90,8 +90,8 @@ export class GazeCalibrationManager {
   }
 
   /**
-   * Smooth Nonlinear S-Curve Transform with Deadband
-   * Prevents micro-tremors and eliminates sudden full-screen jumps
+   * Direct Linear & Responsive Mapping
+   * Maps measured camera pupil coordinates (u, v) [0, 1] directly to screen gaze [-1, 1]
    */
   mapCameraToScreenGaze(rawPupil: Point2D): Point2D {
     const { center, right, left, up, down } = this.profile;
@@ -105,39 +105,33 @@ export class GazeCalibrationManager {
     let gazeX = 0;
     let gazeY = 0;
 
-    // Horizontal Mapping with deadband (0.012)
+    // Horizontal Mapping:
+    // When u < uCenter (camera left -> user is on Screen Right)
+    // When u > uCenter (camera right -> user is on Screen Left)
     const du = u - uCenter;
-    if (Math.abs(du) > 0.012) {
+    if (Math.abs(du) > 0.008) {
       if (du < 0) {
-        // User on Screen Right
         const span = Math.abs(right.pupilCamera.x - uCenter) || 0.18;
-        const linearT = Math.min(1.0, Math.max(0, -du / span));
-        const smoothT = Math.pow(linearT, 1.25);
-        gazeX = smoothT * right.screenGaze.x;
+        const t = Math.min(1.0, -du / span);
+        gazeX = t * right.screenGaze.x;
       } else {
-        // User on Screen Left
         const span = Math.abs(left.pupilCamera.x - uCenter) || 0.18;
-        const linearT = Math.min(1.0, Math.max(0, du / span));
-        const smoothT = Math.pow(linearT, 1.25);
-        gazeX = smoothT * left.screenGaze.x;
+        const t = Math.min(1.0, du / span);
+        gazeX = t * left.screenGaze.x;
       }
     }
 
-    // Vertical Mapping with deadband (0.012)
+    // Vertical Mapping:
     const dv = v - vCenter;
-    if (Math.abs(dv) > 0.012) {
+    if (Math.abs(dv) > 0.008) {
       if (dv < 0) {
-        // User looking UP
         const span = Math.abs(vCenter - up.pupilCamera.y) || 0.14;
-        const linearT = Math.min(1.0, Math.max(0, -dv / span));
-        const smoothT = Math.pow(linearT, 1.25);
-        gazeY = smoothT * up.screenGaze.y;
+        const t = Math.min(1.0, -dv / span);
+        gazeY = t * up.screenGaze.y;
       } else {
-        // User looking DOWN
         const span = Math.abs(down.pupilCamera.y - vCenter) || 0.14;
-        const linearT = Math.min(1.0, Math.max(0, dv / span));
-        const smoothT = Math.pow(linearT, 1.25);
-        gazeY = smoothT * down.screenGaze.y;
+        const t = Math.min(1.0, dv / span);
+        gazeY = t * down.screenGaze.y;
       }
     }
 
