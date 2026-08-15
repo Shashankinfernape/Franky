@@ -11,7 +11,6 @@ import { useBlinkSystem } from '../hooks/useBlinkSystem';
 import { useAIWebSocket } from '../hooks/useAIWebSocket';
 import { useLocalTTS } from '../hooks/useLocalTTS';
 import { useVisionPerception } from '../hooks/useVisionPerception';
-import { gazeCalibration } from '../services/gazeCalibration';
 import type { AttentionOutput, Point2D } from '../types/vision';
 
 const McQueenAIResponses: Record<string, string> = {
@@ -68,7 +67,6 @@ export const FaceScreen: React.FC = () => {
     cameraActive,
     attentionData,
     currentPupilCamera,
-    isThumbUp,
     recalibrateBaseline,
   } = useVisionPerception({
     enabled: isVisionTracking,
@@ -266,7 +264,6 @@ export const FaceScreen: React.FC = () => {
         onToggleOpen={() => setIsVisionHUDOpen(!isVisionHUDOpen)}
         onRecalibrate={recalibrateBaseline}
         onOpenCalibrationStudio={() => setIsCalibrationStudioOpen(true)}
-        onToggleInvertX={() => gazeCalibration.toggleInvertX()}
       />
 
       <ControlPanel
@@ -297,7 +294,6 @@ export const FaceScreen: React.FC = () => {
           setCalibrationForcedGaze(null);
         }}
         currentPupilCamera={currentPupilCamera}
-        isThumbUp={isThumbUp}
         onSetCalibrationGaze={setCalibrationForcedGaze}
         onSpeak={(text) => streamLocalFallback(text, true)}
       />

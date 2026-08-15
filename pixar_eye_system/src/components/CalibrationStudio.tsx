@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { Point2D } from '../types/vision';
 import {
   gazeCalibration,
@@ -6,7 +6,7 @@ import {
   type CalibrationPoint,
 } from '../services/gazeCalibration';
 import {
-  ThumbsUp,
+  Lock,
   RotateCcw,
   CheckCircle2,
   X,
@@ -31,8 +31,7 @@ interface CalibrationStudioProps {
   isOpen: boolean;
   onClose: () => void;
   currentPupilCamera: Point2D | null; // Live pupil position in camera frame [0, 1]
-  isThumbUp: boolean; // Live Hands-free thumbs up gesture detection
-  onSetCalibrationGaze: (gaze: Point2D | null) => void; // Forces Franky to look at calibration reference point
+  onSetCalibrationGaze: (gaze: Point2D | null) => void; // Drives Franky's eyes to user's dragged position
   onSpeak?: (text: string) => void;
 }
 
@@ -40,67 +39,67 @@ const STEP_CONFIGS: Record<
   CalibrationStep,
   {
     title: string;
-    description: string;
-    screenGaze: Point2D;
+    instruction: string;
+    defaultGaze: Point2D;
     icon: React.ReactNode;
     voicePrompt: string;
   }
 > = {
   intro: {
-    title: 'Centric Eye Contact Calibration',
-    description:
-      'McQueen will look in 5 directions. Stand where his eyes point and show a 👍 Thumbs Up to the camera to lock!',
-    screenGaze: { x: 0, y: 0 },
+    title: 'Interactive Drag & Lock Calibration',
+    instruction:
+      'In each step, stand in position, DRAG McQueen’s eyes on screen until he looks 100% directly into your eyes, then tap Lock!',
+    defaultGaze: { x: 0, y: 0 },
     icon: <Sparkles className="w-4 h-4 text-amber-400" />,
-    voicePrompt: "Let's calibrate! Stand where I look and show me a thumbs up!",
+    voicePrompt: "Let's calibrate! Drag my eyes so I'm looking straight at you, then lock it in!",
   },
   center: {
-    title: '1/5: Center Eye Contact',
-    description:
-      'Stand directly in front of the screen. Look into McQueen’s eyes and show 👍 Thumbs Up.',
-    screenGaze: { x: 0.0, y: 0.0 },
+    title: '1/5: Center Position',
+    instruction:
+      'Stay in the CENTER. Drag eyes / use arrows until McQueen looks dead into your eyes, then tap Lock.',
+    defaultGaze: { x: 0.0, y: 0.0 },
     icon: <Target className="w-4 h-4 text-cyan-400 animate-pulse" />,
-    voicePrompt: "Look straight into my eyes from the center, then show me a thumbs up!",
+    voicePrompt: "Look at me from the center, drag my eyes so I'm looking at you, and tap Lock!",
   },
   right: {
-    title: '2/5: Right Room Angle',
-    description:
-      'Step slightly to the RIGHT where McQueen is looking. When he locks eyes, show 👍 Thumbs Up.',
-    screenGaze: { x: 0.28, y: 0.0 },
+    title: '2/5: Stand on RIGHT',
+    instruction:
+      'Step to the RIGHT of camera. Drag McQueen’s eyes until he looks straight into your eyes on the right, then tap Lock.',
+    defaultGaze: { x: 0.40, y: 0.0 },
     icon: <ArrowRight className="w-4 h-4 text-emerald-400" />,
-    voicePrompt: "Now step slightly to where I'm looking on the right, and give me a thumbs up!",
+    voicePrompt: "Now step to your right, drag my eyes to look at you, and tap Lock!",
   },
   left: {
-    title: '3/5: Left Room Angle',
-    description:
-      'Step slightly to the LEFT where McQueen is looking. When he locks eyes, show 👍 Thumbs Up.',
-    screenGaze: { x: -0.28, y: 0.0 },
+    title: '3/5: Stand on LEFT',
+    instruction:
+      'Step to the LEFT of camera. Drag McQueen’s eyes until he looks straight into your eyes on the left, then tap Lock.',
+    defaultGaze: { x: -0.40, y: 0.0 },
     icon: <ArrowLeft className="w-4 h-4 text-indigo-400" />,
-    voicePrompt: "Now step slightly to where I'm looking on the left, and give me a thumbs up!",
+    voicePrompt: "Now step to your left, drag my eyes to look at you, and tap Lock!",
   },
   up: {
-    title: '4/5: High Angle / Standing',
-    description:
-      'Stand tall or look down from above. When McQueen looks up at you, show 👍 Thumbs Up.',
-    screenGaze: { x: 0.0, y: -0.22 },
+    title: '4/5: Look from ABOVE',
+    instruction:
+      'Stand tall or look down at the screen. Drag McQueen’s eyes up until he looks up at you, then tap Lock.',
+    defaultGaze: { x: 0.0, y: -0.30 },
     icon: <ArrowUp className="w-4 h-4 text-purple-400" />,
-    voicePrompt: "Stand tall or look at me from above, then give me a thumbs up!",
+    voicePrompt: "Stand tall or look from above, drag my eyes up to meet you, and tap Lock!",
   },
   down: {
-    title: '5/5: Low Angle / Crouching',
-    description:
-      'Lower down or crouch slightly. When McQueen looks down at you, show 👍 Thumbs Up.',
-    screenGaze: { x: 0.0, y: 0.18 },
+    title: '5/5: Look from BELOW',
+    instruction:
+      'Sit lower or crouch. Drag McQueen’s eyes down until he looks down at you, then tap Lock.',
+    defaultGaze: { x: 0.0, y: 0.25 },
     icon: <ArrowDown className="w-4 h-4 text-pink-400" />,
-    voicePrompt: "Almost there! Lower down slightly to where I'm looking, and give me a thumbs up!",
+    voicePrompt: "Almost done! Sit lower, drag my eyes down to meet you, and tap Lock!",
   },
   complete: {
-    title: 'Calibration Complete!',
-    description:
-      'Centric Mona Lisa trajectory locked. McQueen will now follow and look directly into your eyes!',
-    screenGaze: { x: 0, y: 0 },
+    title: 'Calibration Locked & Saved!',
+    instruction:
+      'Ground-truth trajectory profile generated from your exact manual locks. McQueen will now follow you with 100% precision!',
+    defaultGaze: { x: 0, y: 0 },
     icon: <CheckCircle2 className="w-4 h-4 text-emerald-400" />,
-    voicePrompt: "Ka-chow! Direct eye contact calibrated and locked!",
+    voicePrompt: "Ka-chow! Your custom eye positions are locked in!",
   },
 };
 
@@ -108,31 +107,34 @@ export const CalibrationStudio: React.FC<CalibrationStudioProps> = ({
   isOpen,
   onClose,
   currentPupilCamera,
-  isThumbUp,
   onSetCalibrationGaze,
   onSpeak,
 }) => {
   const [step, setStep] = useState<CalibrationStep>('intro');
+  const [currentGaze, setCurrentGaze] = useState<Point2D>({ x: 0, y: 0 });
   const [recordedPoints, setRecordedPoints] = useState<Partial<CalibrationProfile>>({});
   const [isLockedAnimation, setIsLockedAnimation] = useState(false);
-  const [thumbHoldProgress, setThumbHoldProgress] = useState(0);
 
-  const thumbHoldStartTimeRef = useRef<number | null>(null);
-
-  // Force McQueen to look at the step's reference gaze point
+  // Sync current dragged gaze with Franky's eyes
   useEffect(() => {
     if (!isOpen) {
       onSetCalibrationGaze(null);
       return;
     }
 
-    const currentConfig = STEP_CONFIGS[step];
     if (step !== 'intro' && step !== 'complete') {
-      onSetCalibrationGaze(currentConfig.screenGaze);
+      onSetCalibrationGaze(currentGaze);
     } else {
       onSetCalibrationGaze(null);
     }
-  }, [isOpen, step, onSetCalibrationGaze]);
+  }, [isOpen, step, currentGaze, onSetCalibrationGaze]);
+
+  // Reset gaze to default suggestion when entering a new step
+  useEffect(() => {
+    if (step !== 'intro' && step !== 'complete') {
+      setCurrentGaze(STEP_CONFIGS[step].defaultGaze);
+    }
+  }, [step]);
 
   // Voice guidance prompt per step
   useEffect(() => {
@@ -141,34 +143,40 @@ export const CalibrationStudio: React.FC<CalibrationStudioProps> = ({
     }
   }, [isOpen, step, onSpeak]);
 
+  // Nudge functions (0.05 step)
+  const nudge = useCallback((dx: number, dy: number) => {
+    setCurrentGaze((prev) => ({
+      x: Math.max(-1.0, Math.min(1.0, prev.x + dx)),
+      y: Math.max(-1.0, Math.min(1.0, prev.y + dy)),
+    }));
+  }, []);
+
   const handleCapturePoint = useCallback(() => {
     if (!currentPupilCamera) {
+      alert('Camera is searching for eyes. Make sure your face is visible in the webcam!');
       return;
     }
 
-    const config = STEP_CONFIGS[step];
     const point: CalibrationPoint = {
-      screenGaze: { ...config.screenGaze },
+      screenGaze: { ...currentGaze },
       pupilCamera: { ...currentPupilCamera },
     };
 
     setIsLockedAnimation(true);
-    setTimeout(() => setIsLockedAnimation(false), 350);
+    setTimeout(() => setIsLockedAnimation(false), 300);
 
     setRecordedPoints((prev) => {
       const updated = { ...prev, [step]: point };
 
-      // Transition automatically to next direction
+      // Transition to next step
       if (step === 'center') setStep('right');
       else if (step === 'right') setStep('left');
       else if (step === 'left') setStep('up');
       else if (step === 'up') setStep('down');
       else if (step === 'down') {
-        // Complete & Save Profile
         const finalProfile: CalibrationProfile = {
-          id: 'custom_' + Date.now(),
+          id: 'custom_drag_' + Date.now(),
           timestamp: Date.now(),
-          invertX: gazeCalibration.getProfile().invertX,
           center: updated.center || point,
           right: updated.right || point,
           left: updated.left || point,
@@ -181,52 +189,26 @@ export const CalibrationStudio: React.FC<CalibrationStudioProps> = ({
 
       return updated;
     });
-  }, [step, currentPupilCamera]);
+  }, [step, currentGaze, currentPupilCamera]);
 
-  // Live Hands-Free Thumbs-Up Detection & Auto-Advance Loop
-  useEffect(() => {
-    if (!isOpen || step === 'intro' || step === 'complete') {
-      setThumbHoldProgress(0);
-      thumbHoldStartTimeRef.current = null;
-      return;
-    }
-
-    let intervalId: ReturnType<typeof setInterval>;
-
-    if (isThumbUp && currentPupilCamera) {
-      if (!thumbHoldStartTimeRef.current) {
-        thumbHoldStartTimeRef.current = Date.now();
-      }
-
-      intervalId = setInterval(() => {
-        const elapsed = Date.now() - (thumbHoldStartTimeRef.current || Date.now());
-        const holdTarget = 400; // Hold for 400ms to confirm
-        const progress = Math.min(100, Math.round((elapsed / holdTarget) * 100));
-        setThumbHoldProgress(progress);
-
-        if (progress >= 100) {
-          clearInterval(intervalId);
-          thumbHoldStartTimeRef.current = null;
-          setThumbHoldProgress(0);
-          handleCapturePoint();
-        }
-      }, 30);
-    } else {
-      thumbHoldStartTimeRef.current = null;
-      setThumbHoldProgress(0);
-    }
-
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [isOpen, step, isThumbUp, currentPupilCamera, handleCapturePoint]);
-
-  // Keyboard shortcut (Space / Enter for thumbs up)
+  // Keyboard arrow keys for precision nudging + Space for lock
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' || e.code === 'Enter') {
+      if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        nudge(-0.04, 0);
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        nudge(0.04, 0);
+      } else if (e.code === 'ArrowUp') {
+        e.preventDefault();
+        nudge(0, -0.04);
+      } else if (e.code === 'ArrowDown') {
+        e.preventDefault();
+        nudge(0, 0.04);
+      } else if (e.code === 'Space' || e.code === 'Enter') {
         e.preventDefault();
         if (step === 'intro') setStep('center');
         else if (step === 'complete') onClose();
@@ -238,27 +220,27 @@ export const CalibrationStudio: React.FC<CalibrationStudioProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, step, handleCapturePoint, onClose]);
+  }, [isOpen, step, nudge, handleCapturePoint, onClose]);
 
   if (!isOpen) return null;
 
   const currentConfig = STEP_CONFIGS[step];
 
   return (
-    /* Completely unobscured floating Top Island HUD (Eyes in center remain 100% visible) */
-    <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[100] w-[95%] max-w-md pointer-events-auto select-none font-sans animate-in fade-in slide-in-from-top-2">
+    /* Floating Top HUD - 100% Unobscured Eyes in Center */
+    <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[100] w-[95%] max-w-lg pointer-events-auto select-none font-sans animate-in fade-in slide-in-from-top-2">
       <div className="bg-slate-950/90 border border-white/25 rounded-2xl p-3 shadow-2xl backdrop-blur-xl text-white space-y-2.5">
-        {/* Top Header & Progress */}
+        {/* Top Header */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
             <h2 className="text-xs font-bold uppercase tracking-wider text-cyan-300">
               {currentConfig.title}
             </h2>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Step Indicator Progress Dots */}
+            {/* Step Progress Dots */}
             <div className="flex items-center gap-1">
               {(['center', 'right', 'left', 'up', 'down'] as const).map((s) => {
                 const isDone = Boolean(recordedPoints[s]);
@@ -287,73 +269,101 @@ export const CalibrationStudio: React.FC<CalibrationStudioProps> = ({
           </div>
         </div>
 
-        {/* Prompt & Guidance */}
+        {/* Instruction Banner */}
         <p className="text-[11px] text-slate-200 leading-snug">
-          {currentConfig.description}
+          {currentConfig.instruction}
         </p>
 
-        {/* Live Gesture Detection Status */}
+        {/* Interactive Gaze Nudge D-Pad & Camera Status */}
         {step !== 'intro' && step !== 'complete' && (
           <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/10">
-            <div className="flex items-center gap-1.5 text-[10px] font-mono">
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  isThumbUp ? 'bg-emerald-400 animate-ping' : 'bg-slate-500'
-                }`}
-              />
-              <span className={isThumbUp ? 'text-emerald-300 font-bold' : 'text-slate-400'}>
-                {isThumbUp ? '👍 Thumbs Up! Locking...' : 'Show 👍 to camera'}
-              </span>
+            {/* Camera Status */}
+            <div className="flex flex-col gap-0.5 text-[10px] font-mono">
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    currentPupilCamera ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'
+                  }`}
+                />
+                <span className={currentPupilCamera ? 'text-emerald-300' : 'text-rose-400'}>
+                  {currentPupilCamera ? 'Eyes Detected ✓' : 'Face not visible'}
+                </span>
+              </div>
+              <div className="text-slate-400 text-[9px]">
+                Gaze (X:{currentGaze.x.toFixed(2)}, Y:{currentGaze.y.toFixed(2)})
+              </div>
             </div>
 
-            {thumbHoldProgress > 0 && (
-              <div className="w-24 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-emerald-400 to-cyan-400 transition-all duration-75"
-                  style={{ width: `${thumbHoldProgress}%` }}
-                />
+            {/* Directional Nudge D-Pad Buttons */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => nudge(-0.06, 0)}
+                title="Nudge Left"
+                className="p-1.5 bg-slate-800 hover:bg-slate-700 active:scale-90 rounded-lg text-slate-200 border border-white/10"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+              </button>
+              <div className="flex flex-col gap-1">
+                <button
+                  onClick={() => nudge(0, -0.06)}
+                  title="Nudge Up"
+                  className="p-1.5 bg-slate-800 hover:bg-slate-700 active:scale-90 rounded-lg text-slate-200 border border-white/10"
+                >
+                  <ArrowUp className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => nudge(0, 0.06)}
+                  title="Nudge Down"
+                  className="p-1.5 bg-slate-800 hover:bg-slate-700 active:scale-90 rounded-lg text-slate-200 border border-white/10"
+                >
+                  <ArrowDown className="w-3.5 h-3.5" />
+                </button>
               </div>
-            )}
+              <button
+                onClick={() => nudge(0.06, 0)}
+                title="Nudge Right"
+                className="p-1.5 bg-slate-800 hover:bg-slate-700 active:scale-90 rounded-lg text-slate-200 border border-white/10"
+              >
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Action Buttons */}
+        {/* Action Controls */}
         <div className="flex items-center gap-2 pt-1 border-t border-white/10">
           {step === 'intro' ? (
             <button
               onClick={() => setStep('center')}
-              className="w-full py-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold rounded-xl shadow transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer text-xs"
+              className="w-full py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold rounded-xl shadow transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer text-xs"
             >
-              <span>Begin Sequence</span>
+              <span>Begin Drag & Lock</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           ) : step === 'complete' ? (
             <button
               onClick={onClose}
-              className="w-full py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl shadow transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer text-xs"
+              className="w-full py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl shadow transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer text-xs"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Done!</span>
+              <span>Done! Enjoy Perfect Eye Contact</span>
             </button>
           ) : (
             <>
               <button
                 onClick={handleCapturePoint}
-                className={`flex-1 py-1.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-semibold rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer text-[11px] border border-cyan-400/30 ${
-                  isLockedAnimation ? 'ring-2 ring-cyan-400' : ''
+                className={`flex-1 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer text-xs border border-emerald-400/30 ${
+                  isLockedAnimation ? 'ring-2 ring-emerald-400 scale-105' : ''
                 }`}
               >
-                <ThumbsUp className="w-3.5 h-3.5 text-yellow-300" />
-                <span>Tap or Show 👍</span>
+                <Lock className="w-3.5 h-3.5 text-yellow-300" />
+                <span>🔒 Lock This Position & Next</span>
               </button>
 
               <button
-                onClick={() => {
-                  setStep('center');
-                  setRecordedPoints({});
-                }}
-                title="Restart"
-                className="p-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-slate-400 hover:text-white transition-all active:scale-95 cursor-pointer"
+                onClick={() => setCurrentGaze(STEP_CONFIGS[step].defaultGaze)}
+                title="Reset Position"
+                className="p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-slate-400 hover:text-white transition-all active:scale-95 cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
