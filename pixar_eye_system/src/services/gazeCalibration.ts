@@ -15,9 +15,9 @@ export interface CalibrationProfile {
   down: CalibrationPoint;
 }
 
-const STORAGE_KEY = 'franky_eye_calibration_v4';
+const STORAGE_KEY = 'franky_eye_calibration_v5';
 
-// Default fallback calibration (camera-friendly natural FOV angles)
+// Default fallback calibration (gentle natural FOV)
 const DEFAULT_PROFILE: CalibrationProfile = {
   id: 'default',
   timestamp: Date.now(),
@@ -26,19 +26,19 @@ const DEFAULT_PROFILE: CalibrationProfile = {
     pupilCamera: { x: 0.50, y: 0.44 },
   },
   right: {
-    screenGaze: { x: 0.28, y: 0.0 },
+    screenGaze: { x: 0.22, y: 0.0 },
     pupilCamera: { x: 0.32, y: 0.44 },
   },
   left: {
-    screenGaze: { x: -0.28, y: 0.0 },
+    screenGaze: { x: -0.22, y: 0.0 },
     pupilCamera: { x: 0.68, y: 0.44 },
   },
   up: {
-    screenGaze: { x: 0.0, y: -0.22 },
+    screenGaze: { x: 0.0, y: -0.18 },
     pupilCamera: { x: 0.50, y: 0.32 },
   },
   down: {
-    screenGaze: { x: 0.0, y: 0.18 },
+    screenGaze: { x: 0.0, y: 0.15 },
     pupilCamera: { x: 0.50, y: 0.56 },
   },
 };
@@ -90,8 +90,8 @@ export class GazeCalibrationManager {
   }
 
   /**
-   * Piecewise Bilinear Interpolation Transform
-   * Maps measured camera pupil coordinates (u, v) [0, 1] directly to calibrated centric screen gaze [-1, 1]
+   * Smooth Nonlinear S-Curve Transform with Deadband
+   * Prevents micro-tremors and eliminates sudden full-screen jumps
    */
   mapCameraToScreenGaze(rawPupil: Point2D): Point2D {
     const { center, right, left, up, down } = this.profile;
@@ -105,34 +105,40 @@ export class GazeCalibrationManager {
     let gazeX = 0;
     let gazeY = 0;
 
-    // Horizontal Mapping:
-    // In camera selfie space: u < uCenter means user is on screen RIGHT
-    // u > uCenter means user is on screen LEFT
-    if (u <= uCenter) {
-      const uRight = right.pupilCamera.x;
-      const span = Math.abs(uRight - uCenter) || 0.18;
-      const t = Math.min(1.2, Math.max(0, (uCenter - u) / span));
-      gazeX = t * right.screenGaze.x;
-    } else {
-      const uLeft = left.pupilCamera.x;
-      const span = Math.abs(uLeft - uCenter) || 0.18;
-      const t = Math.min(1.2, Math.max(0, (u - uCenter) / span));
-      gazeX = t * left.screenGaze.x;
+    // Horizontal Mapping with deadband (0.012)
+    const du = u - uCenter;
+    if (Math.abs(du) > 0.012) {
+      if (du < 0) {
+        // User on Screen Right
+        const span = Math.abs(right.pupilCamera.x - uCenter) || 0.18;
+        const linearT = Math.min(1.0, Math.max(0, -du / span));
+        const smoothT = Math.pow(linearT, 1.25);
+        gazeX = smoothT * right.screenGaze.x;
+      } else {
+        // User on Screen Left
+        const span = Math.abs(left.pupilCamera.x - uCenter) || 0.18;
+        const linearT = Math.min(1.0, Math.max(0, du / span));
+        const smoothT = Math.pow(linearT, 1.25);
+        gazeX = smoothT * left.screenGaze.x;
+      }
     }
 
-    // Vertical Mapping:
-    // v < vCenter means user is above (looking UP)
-    // v > vCenter means user is below (looking DOWN)
-    if (v <= vCenter) {
-      const vUp = up.pupilCamera.y;
-      const span = Math.abs(vCenter - vUp) || 0.14;
-      const t = Math.min(1.2, Math.max(0, (vCenter - v) / span));
-      gazeY = t * up.screenGaze.y;
-    } else {
-      const vDown = down.pupilCamera.y;
-      const span = Math.abs(vDown - vCenter) || 0.14;
-      const t = Math.min(1.2, Math.max(0, (v - vCenter) / span));
-      gazeY = t * down.screenGaze.y;
+    // Vertical Mapping with deadband (0.012)
+    const dv = v - vCenter;
+    if (Math.abs(dv) > 0.012) {
+      if (dv < 0) {
+        // User looking UP
+        const span = Math.abs(vCenter - up.pupilCamera.y) || 0.14;
+        const linearT = Math.min(1.0, Math.max(0, -dv / span));
+        const smoothT = Math.pow(linearT, 1.25);
+        gazeY = smoothT * up.screenGaze.y;
+      } else {
+        // User looking DOWN
+        const span = Math.abs(down.pupilCamera.y - vCenter) || 0.14;
+        const linearT = Math.min(1.0, Math.max(0, dv / span));
+        const smoothT = Math.pow(linearT, 1.25);
+        gazeY = smoothT * down.screenGaze.y;
+      }
     }
 
     return {

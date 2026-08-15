@@ -9,8 +9,8 @@ import type {
 import { OneEuroFilter2D } from '../utils/oneEuroFilter';
 
 const DEFAULT_CONFIG: AttentionConfig = {
-  irisSensitivity: 1.2,
-  persistenceMs: 1200, // Hold last known eye target for 1.2s when blinked/obscured
+  irisSensitivity: 1.0,
+  persistenceMs: 1500, // Hold last known eye target for 1.5s when blinked/obscured
 };
 
 export class AttentionArbitrator {
@@ -25,8 +25,8 @@ export class AttentionArbitrator {
 
   constructor(config: Partial<AttentionConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    // 1€ Filter: minCutoff = 1.2 Hz (smooth stationary gaze), beta = 0.008 (snappy saccades)
-    this.filter = new OneEuroFilter2D(1.2, 0.008, 1.0);
+    // 1€ Filter: minCutoff = 0.5 Hz (deep stationary jitter suppression), beta = 0.003 (gentle organic acceleration)
+    this.filter = new OneEuroFilter2D(0.5, 0.003, 1.0);
   }
 
   update(targets: VisionTarget[], now: number = performance.now()): AttentionOutput {

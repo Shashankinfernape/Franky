@@ -41,48 +41,45 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
   const isUserInteractingRef = useRef(false);
   const isTouchRef = useRef(false);
 
-  // Micro-Saccades & Idle Lookaround Generator (Movie Accurate: 1-3 pixels amplitude ONLY!)
+  // Micro-Saccades & Idle Lookaround Generator (Calm, 1-2px gentle drift)
   useEffect(() => {
     let saccadeTimer: ReturnType<typeof setTimeout> | null = null;
     let idleTimer: ReturnType<typeof setTimeout> | null = null;
 
-    // Pixar micro drift generator (1-3px tiny calm drift)
     const scheduleSaccade = () => {
       if (!enableMicroSaccades) return;
 
-      const delay = (2000 + Math.random() * 2500) / saccadeSpeedMultiplier;
+      const delay = (2500 + Math.random() * 3000) / saccadeSpeedMultiplier;
       saccadeTimer = setTimeout(() => {
-        // Subtle offset range -0.02 to +0.02 (translates to 1-3 pixels max!)
+        // Ultra-subtle micro fixation drift (max 0.015)
         microOffsetRef.current = {
-          x: (Math.random() - 0.5) * 0.03,
-          y: (Math.random() - 0.5) * 0.02,
+          x: (Math.random() - 0.5) * 0.015,
+          y: (Math.random() - 0.5) * 0.010,
         };
         scheduleSaccade();
       }, delay);
     };
 
-    // Idle look-around sequence (when user hasn't interacted for 4 seconds)
     const scheduleIdleLook = () => {
       if (!enableIdleLookAround) return;
 
       idleTimer = setTimeout(() => {
         const timeSinceUser = Date.now() - lastUserInteractionTime.current;
-        if (timeSinceUser > 4000) {
+        if (timeSinceUser > 5000) {
           isUserInteractingRef.current = false;
           isTouchRef.current = false;
-          // Pixar calm gaze pattern: slight look side, pause, return
           const idleTargets: GazePoint[] = [
-            { x: 0.25, y: -0.08 },
-            { x: -0.3, y: -0.05 },
-            { x: 0.1, y: 0.18 },
-            { x: -0.15, y: 0.12 },
+            { x: 0.15, y: -0.05 },
+            { x: -0.15, y: -0.04 },
+            { x: 0.08, y: 0.10 },
+            { x: -0.08, y: 0.08 },
             { x: 0, y: 0 },
           ];
           const randomPick = idleTargets[Math.floor(Math.random() * idleTargets.length)];
           targetRef.current = randomPick;
         }
         scheduleIdleLook();
-      }, 4500 + Math.random() * 3000);
+      }, 5000 + Math.random() * 3000);
     };
 
     scheduleSaccade();
@@ -94,52 +91,68 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
     };
   }, [enableMicroSaccades, enableIdleLookAround, saccadeSpeedMultiplier]);
 
-  // 60 FPS Organic Spring Physics Engine Loop
+  // 60 FPS Cinematic Slow-Glide Physics Loop
   useEffect(() => {
     let animFrameId: number;
-    const startTime = performance.now();
+    let lastFrameTime = performance.now();
 
     const updatePhysics = (now: number) => {
-      const elapsedSec = (now - startTime) / 1000;
+      const dt = Math.min(0.05, Math.max(0.001, (now - lastFrameTime) / 1000));
+      lastFrameTime = now;
 
-      // Pixar Breathing Rhythm (Slow 0.2 Hz sinusoidal drift)
-      const breathingY = enableBreathing ? Math.sin(elapsedSec * 1.2) * 0.008 : 0;
-      const breathingX = enableBreathing ? Math.cos(elapsedSec * 0.6) * 0.004 : 0;
+      // Organic Breathing Rhythm (0.2 Hz sinusoidal drift)
+      const breathingY = enableBreathing ? Math.sin(now * 0.0012) * 0.006 : 0;
+      const breathingX = enableBreathing ? Math.cos(now * 0.0006) * 0.003 : 0;
 
       // Desired target + micro offsets + breathing
       const finalTargetX = targetRef.current.x + microOffsetRef.current.x + breathingX;
       const finalTargetY = targetRef.current.y + microOffsetRef.current.y + breathingY;
 
       if (isUserInteractingRef.current && isTouchRef.current) {
-        // BGMI-like instant 1:1 tracking with zero physics drag
+        // Direct touch tracking
         gazeRef.current.x = finalTargetX;
         gazeRef.current.y = finalTargetY;
         velocityRef.current.x = 0;
         velocityRef.current.y = 0;
       } else {
-        // Spring dynamics parameters (Responsive, lifelike Pixar eye tracking)
-        const stiffness = 440;
-        const damping = 32;
-        const dt = 1 / 60;
+        // Cinematic Critically-Damped Spring Dynamics (Slow, weighted, organic eye glides)
+        const stiffness = 85.0; // Gentle spring pull
+        const damping = 18.5; // High damping: eliminates twitching, snapping, and overshoot
 
-        // Spring force
+        // Spring acceleration
         const forceX = (finalTargetX - gazeRef.current.x) * stiffness;
         const forceY = (finalTargetY - gazeRef.current.y) * stiffness;
 
-        // Update velocity with damping
-        velocityRef.current.x = (velocityRef.current.x + forceX * dt) * (1 - damping * dt);
-        velocityRef.current.y = (velocityRef.current.y + forceY * dt) * (1 - damping * dt);
+        // Velocity integration
+        velocityRef.current.x += forceX * dt;
+        velocityRef.current.y += forceY * dt;
 
-        // Update position
+        // Apply viscous drag
+        velocityRef.current.x *= Math.max(0, 1 - damping * dt);
+        velocityRef.current.y *= Math.max(0, 1 - damping * dt);
+
+        // Velocity speed cap (Prevents wild snapping across screen)
+        const maxSpeed = 1.6; // units per second
+        const currentSpeed = Math.sqrt(
+          velocityRef.current.x * velocityRef.current.x +
+          velocityRef.current.y * velocityRef.current.y
+        );
+        if (currentSpeed > maxSpeed) {
+          const scale = maxSpeed / currentSpeed;
+          velocityRef.current.x *= scale;
+          velocityRef.current.y *= scale;
+        }
+
+        // Position integration
         gazeRef.current.x += velocityRef.current.x * dt;
         gazeRef.current.y += velocityRef.current.y * dt;
       }
 
-      // Glass Parallax Highlight calculation: moves OPPOSITE to gaze direction
-      const pX = -gazeRef.current.x * 12;
-      const pY = -gazeRef.current.y * 8;
+      // Parallax Highlight calculation
+      const pX = -gazeRef.current.x * 8;
+      const pY = -gazeRef.current.y * 5;
 
-      // Direct write to MotionValues (Bypasses React DOM diffing!)
+      // Direct write to Framer Motion values
       gazeX.set(gazeRef.current.x);
       gazeY.set(gazeRef.current.y);
       parallaxX.set(pX);
@@ -156,8 +169,6 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
   }, [enableBreathing, gazeX, gazeY, parallaxX, parallaxY]);
 
   // Set user gaze target explicitly (clamped -1 to 1)
-  // This is called 60-120 times per second during touch!
-  // It ONLY updates a ref, triggering ZERO React renders.
   const setGaze = (point: GazePoint, isTouch: boolean = true) => {
     const clampedX = Math.max(-1, Math.min(1, point.x));
     const clampedY = Math.max(-1, Math.min(1, point.y));
