@@ -15,18 +15,18 @@ interface EyeProps {
 // McQueen's idle gaze direction per emotion (when not face-tracking)
 const EMOTION_GAZE: Record<EmotionalState, { x: number; y: number }> = {
   neutral:     { x: 0,     y: 0     },
-  happy:       { x: 0,     y: -0.10 },
-  excited:     { x: 0,     y: -0.16 },
-  angry:       { x: 0,     y:  0.08 },
-  sad:         { x: 0.04,  y:  0.15 },
-  sleepy:      { x: 0,     y:  0.20 },
+  happy:       { x: 0,     y: -0.08 },
+  excited:     { x: 0,     y: -0.14 },
+  angry:       { x: 0,     y:  0.06 },
+  sad:         { x: 0.03,  y:  0.12 },
+  sleepy:      { x: 0,     y:  0.16 },
   focused:     { x: 0,     y:  0.02 },
-  thinking:    { x: -0.20, y: -0.14 },
-  curious:     { x: 0.15,  y: -0.10 },
-  confused:    { x: -0.10, y:  0.02 },
-  embarrassed: { x: 0.18,  y:  0.18 },
-  celebrating: { x: 0,     y: -0.20 },
-  listening:   { x: 0,     y: -0.04 },
+  thinking:    { x: -0.15, y: -0.10 },
+  curious:     { x: 0.12,  y: -0.08 },
+  confused:    { x: -0.08, y:  0.02 },
+  embarrassed: { x: 0.14,  y:  0.14 },
+  celebrating: { x: 0,     y: -0.16 },
+  listening:   { x: 0,     y: -0.03 },
   talking:     { x: 0,     y:  0    },
 };
 
@@ -40,10 +40,10 @@ export const Eye: React.FC<EyeProps> = ({
 }) => {
   const eGaze = EMOTION_GAZE[emotionState] ?? { x: 0, y: 0 };
   
-  // Natural, camera-friendly eye deflection (4.8vw max horizontal, 2.4vw max vertical)
-  // Perfectly calibrated within human camera FOV so eyes never overshoot into extreme edges
-  const bX = useTransform(gazeX, (x) => (x * 0.70 + eGaze.x * 0.30) * 4.8 + 'vw');
-  const bY = useTransform(gazeY, (y) => (y * 0.70 + eGaze.y * 0.30) * 2.4 + 'vw');
+  // Subtle, precise eye deflection (3.2vw horizontal, 1.8vw vertical)
+  // Perfectly calibrated for tablets and laptops so eye contact is gentle and locks directly into your eyes
+  const bX = useTransform(gazeX, (x) => (x * 0.70 + eGaze.x * 0.30) * 3.2 + 'vw');
+  const bY = useTransform(gazeY, (y) => (y * 0.70 + eGaze.y * 0.30) * 1.8 + 'vw');
 
   return (
     <div className="relative flex items-center justify-center pointer-events-none">
