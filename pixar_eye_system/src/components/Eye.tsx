@@ -15,18 +15,18 @@ interface EyeProps {
 // McQueen's idle gaze direction per emotion (when not face-tracking)
 const EMOTION_GAZE: Record<EmotionalState, { x: number; y: number }> = {
   neutral:     { x: 0,     y: 0     },
-  happy:       { x: 0,     y: -0.12 },
-  excited:     { x: 0,     y: -0.20 },
-  angry:       { x: 0,     y:  0.10 },
-  sad:         { x: 0.05,  y:  0.20 },
-  sleepy:      { x: 0,     y:  0.25 },
-  focused:     { x: 0,     y:  0.03 },
-  thinking:    { x: -0.25, y: -0.18 },
-  curious:     { x: 0.18,  y: -0.12 },
-  confused:    { x: -0.12, y:  0.03 },
-  embarrassed: { x: 0.22,  y:  0.22 },
-  celebrating: { x: 0,     y: -0.25 },
-  listening:   { x: 0,     y: -0.05 },
+  happy:       { x: 0,     y: -0.10 },
+  excited:     { x: 0,     y: -0.16 },
+  angry:       { x: 0,     y:  0.08 },
+  sad:         { x: 0.04,  y:  0.15 },
+  sleepy:      { x: 0,     y:  0.20 },
+  focused:     { x: 0,     y:  0.02 },
+  thinking:    { x: -0.20, y: -0.14 },
+  curious:     { x: 0.15,  y: -0.10 },
+  confused:    { x: -0.10, y:  0.02 },
+  embarrassed: { x: 0.18,  y:  0.18 },
+  celebrating: { x: 0,     y: -0.20 },
+  listening:   { x: 0,     y: -0.04 },
   talking:     { x: 0,     y:  0    },
 };
 
@@ -40,9 +40,10 @@ export const Eye: React.FC<EyeProps> = ({
 }) => {
   const eGaze = EMOTION_GAZE[emotionState] ?? { x: 0, y: 0 };
   
-  // Centric, high-focus eye deflection (7.8vw max horizontal, 3.6vw max vertical)
-  const bX = useTransform(gazeX, (x) => (x * 0.70 + eGaze.x * 0.30) * 7.8 + 'vw');
-  const bY = useTransform(gazeY, (y) => (y * 0.70 + eGaze.y * 0.30) * 3.6 + 'vw');
+  // Natural, camera-friendly eye deflection (4.8vw max horizontal, 2.4vw max vertical)
+  // Perfectly calibrated within human camera FOV so eyes never overshoot into extreme edges
+  const bX = useTransform(gazeX, (x) => (x * 0.70 + eGaze.x * 0.30) * 4.8 + 'vw');
+  const bY = useTransform(gazeY, (y) => (y * 0.70 + eGaze.y * 0.30) * 2.4 + 'vw');
 
   return (
     <div className="relative flex items-center justify-center pointer-events-none">

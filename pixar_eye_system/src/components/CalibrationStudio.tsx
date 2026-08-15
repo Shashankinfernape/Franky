@@ -65,34 +65,34 @@ const STEP_CONFIGS: Record<
   right: {
     title: '2/5: Right Room Angle',
     description:
-      'Step to the RIGHT where McQueen is looking. When he locks into your eyes, show 👍 Thumbs Up.',
-    screenGaze: { x: 0.55, y: 0.0 },
+      'Step slightly to the RIGHT where McQueen is looking. When he locks eyes, show 👍 Thumbs Up.',
+    screenGaze: { x: 0.28, y: 0.0 },
     icon: <ArrowRight className="w-4 h-4 text-emerald-400" />,
-    voicePrompt: "Now step to where I'm looking on the right, and give me a thumbs up!",
+    voicePrompt: "Now step slightly to where I'm looking on the right, and give me a thumbs up!",
   },
   left: {
     title: '3/5: Left Room Angle',
     description:
-      'Step to the LEFT where McQueen is looking. When he locks into your eyes, show 👍 Thumbs Up.',
-    screenGaze: { x: -0.55, y: 0.0 },
+      'Step slightly to the LEFT where McQueen is looking. When he locks eyes, show 👍 Thumbs Up.',
+    screenGaze: { x: -0.28, y: 0.0 },
     icon: <ArrowLeft className="w-4 h-4 text-indigo-400" />,
-    voicePrompt: "Now step to where I'm looking on the left, and give me a thumbs up!",
+    voicePrompt: "Now step slightly to where I'm looking on the left, and give me a thumbs up!",
   },
   up: {
     title: '4/5: High Angle / Standing',
     description:
       'Stand tall or look down from above. When McQueen looks up at you, show 👍 Thumbs Up.',
-    screenGaze: { x: 0.0, y: -0.42 },
+    screenGaze: { x: 0.0, y: -0.22 },
     icon: <ArrowUp className="w-4 h-4 text-purple-400" />,
     voicePrompt: "Stand tall or look at me from above, then give me a thumbs up!",
   },
   down: {
     title: '5/5: Low Angle / Crouching',
     description:
-      'Lower down or crouch. When McQueen looks down at you, show 👍 Thumbs Up.',
-    screenGaze: { x: 0.0, y: 0.35 },
+      'Lower down or crouch slightly. When McQueen looks down at you, show 👍 Thumbs Up.',
+    screenGaze: { x: 0.0, y: 0.18 },
     icon: <ArrowDown className="w-4 h-4 text-pink-400" />,
-    voicePrompt: "Almost there! Lower down to where I'm looking, and give me a thumbs up!",
+    voicePrompt: "Almost there! Lower down slightly to where I'm looking, and give me a thumbs up!",
   },
   complete: {
     title: 'Calibration Complete!',

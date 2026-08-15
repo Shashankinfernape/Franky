@@ -15,9 +15,9 @@ export interface CalibrationProfile {
   down: CalibrationPoint;
 }
 
-const STORAGE_KEY = 'franky_eye_calibration_v3';
+const STORAGE_KEY = 'franky_eye_calibration_v4';
 
-// Default fallback calibration (centric focused gaze)
+// Default fallback calibration (camera-friendly natural FOV angles)
 const DEFAULT_PROFILE: CalibrationProfile = {
   id: 'default',
   timestamp: Date.now(),
@@ -26,20 +26,20 @@ const DEFAULT_PROFILE: CalibrationProfile = {
     pupilCamera: { x: 0.50, y: 0.44 },
   },
   right: {
-    screenGaze: { x: 0.55, y: 0.0 },
-    pupilCamera: { x: 0.22, y: 0.44 },
+    screenGaze: { x: 0.28, y: 0.0 },
+    pupilCamera: { x: 0.32, y: 0.44 },
   },
   left: {
-    screenGaze: { x: -0.55, y: 0.0 },
-    pupilCamera: { x: 0.78, y: 0.44 },
+    screenGaze: { x: -0.28, y: 0.0 },
+    pupilCamera: { x: 0.68, y: 0.44 },
   },
   up: {
-    screenGaze: { x: 0.0, y: -0.42 },
-    pupilCamera: { x: 0.50, y: 0.25 },
+    screenGaze: { x: 0.0, y: -0.22 },
+    pupilCamera: { x: 0.50, y: 0.32 },
   },
   down: {
-    screenGaze: { x: 0.0, y: 0.35 },
-    pupilCamera: { x: 0.50, y: 0.62 },
+    screenGaze: { x: 0.0, y: 0.18 },
+    pupilCamera: { x: 0.50, y: 0.56 },
   },
 };
 
@@ -110,12 +110,12 @@ export class GazeCalibrationManager {
     // u > uCenter means user is on screen LEFT
     if (u <= uCenter) {
       const uRight = right.pupilCamera.x;
-      const span = Math.abs(uRight - uCenter) || 0.25;
-      const t = Math.min(1.2, Math.max(0, (uCenter - u) / span)); // smooth linear interpolation
+      const span = Math.abs(uRight - uCenter) || 0.18;
+      const t = Math.min(1.2, Math.max(0, (uCenter - u) / span));
       gazeX = t * right.screenGaze.x;
     } else {
       const uLeft = left.pupilCamera.x;
-      const span = Math.abs(uLeft - uCenter) || 0.25;
+      const span = Math.abs(uLeft - uCenter) || 0.18;
       const t = Math.min(1.2, Math.max(0, (u - uCenter) / span));
       gazeX = t * left.screenGaze.x;
     }
@@ -125,12 +125,12 @@ export class GazeCalibrationManager {
     // v > vCenter means user is below (looking DOWN)
     if (v <= vCenter) {
       const vUp = up.pupilCamera.y;
-      const span = Math.abs(vCenter - vUp) || 0.20;
+      const span = Math.abs(vCenter - vUp) || 0.14;
       const t = Math.min(1.2, Math.max(0, (vCenter - v) / span));
       gazeY = t * up.screenGaze.y;
     } else {
       const vDown = down.pupilCamera.y;
-      const span = Math.abs(vDown - vCenter) || 0.20;
+      const span = Math.abs(vDown - vCenter) || 0.14;
       const t = Math.min(1.2, Math.max(0, (v - vCenter) / span));
       gazeY = t * down.screenGaze.y;
     }
