@@ -40,6 +40,7 @@ export interface AttentionOutput {
 export interface AttentionConfig {
   irisWeight: number; // default 0.75
   headYawWeight: number; // default 0.25
+  enableCuriosity: boolean; // default false for strict human focus (Eyes -> Face -> Body)
   curiosityThreshold: number; // default 0.65
   curiosityMinDurationMs: number; // default 700ms
   curiosityMaxDurationMs: number; // default 1400ms

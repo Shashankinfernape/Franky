@@ -22,7 +22,7 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
   const {
     enabled,
     enablePose = true,
-    enableCuriosity = true,
+    enableCuriosity = false,
     curiositySensitivity = 0.5,
     onAttentionUpdate,
   } = options;
@@ -37,7 +37,9 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
   const faceLandmarkerRef = useRef<FaceLandmarker | null>(null);
   const poseLandmarkerRef = useRef<PoseLandmarker | null>(null);
   const motionDetectorRef = useRef<MotionSaliencyDetector | null>(null);
-  const arbitratorRef = useRef<AttentionArbitrator>(new AttentionArbitrator());
+  const arbitratorRef = useRef<AttentionArbitrator>(
+    new AttentionArbitrator({ enableCuriosity })
+  );
 
   const animFrameRef = useRef<number | null>(null);
   const lastFaceTimeRef = useRef<number>(0);
@@ -46,6 +48,15 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
 
   const onAttentionUpdateRef = useRef(onAttentionUpdate);
   onAttentionUpdateRef.current = onAttentionUpdate;
+
+  // Adjust curiosity settings on arbitrator
+  useEffect(() => {
+    const threshold = 0.85 - curiositySensitivity * 0.4;
+    arbitratorRef.current.setConfig({
+      enableCuriosity,
+      curiosityThreshold: threshold,
+    });
+  }, [enableCuriosity, curiositySensitivity]);
 
   // Initialize MediaPipe Models
   useEffect(() => {
@@ -113,12 +124,7 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
     };
   }, [enabled, enablePose]);
 
-  // Adjust curiosity threshold based on sensitivity slider
-  useEffect(() => {
-    // sensitivity 1.0 -> threshold 0.45 (very curious), sensitivity 0.0 -> threshold 0.85 (rarely distracted)
-    const threshold = 0.85 - curiositySensitivity * 0.40;
-    arbitratorRef.current.setConfig({ curiosityThreshold: threshold });
-  }, [curiositySensitivity]);
+
 
   // Start Camera Stream
   const startCamera = useCallback(async () => {

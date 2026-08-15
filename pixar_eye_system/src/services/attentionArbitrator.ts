@@ -11,6 +11,7 @@ import { OneEuroFilter2D } from '../utils/oneEuroFilter';
 const DEFAULT_CONFIG: AttentionConfig = {
   irisWeight: 0.75,
   headYawWeight: 0.25,
+  enableCuriosity: false, // Default: Focus strictly on human eyes -> face -> body
   curiosityThreshold: 0.62,
   curiosityMinDurationMs: 650,
   curiosityMaxDurationMs: 1200,
@@ -42,12 +43,15 @@ export class AttentionArbitrator {
 
   update(targets: VisionTarget[], now: number = performance.now()): AttentionOutput {
     // 1. Separate human targets from motion targets
+    // Strict priority: Iris (high confidence) > Face (medium confidence) > Body (fallback)
     const irisTarget = targets.find((t) => t.source === 'iris' && t.confidence > 0.4);
     const faceTarget = targets.find((t) => t.source === 'face' && t.confidence > 0.35);
     const bodyTarget = targets.find((t) => t.source === 'body' && t.confidence > 0.3);
-    const motionTarget = targets.find((t) => t.source === 'motion' && t.confidence > 0.3);
+    const motionTarget = this.config.enableCuriosity
+      ? targets.find((t) => t.source === 'motion' && t.confidence > 0.3)
+      : undefined;
 
-    // Pick best available human target (Cascade Priority: Iris > Face > Body)
+    // Pick best available human target (Cascade Priority: Eyes / Iris -> Face Trajectory -> Body / Torso)
     let bestHumanTarget: VisionTarget | null = null;
     if (irisTarget) {
       bestHumanTarget = irisTarget;
@@ -75,14 +79,15 @@ export class AttentionArbitrator {
     let curiosityDilation = 0.0;
     let isGlancing = false;
 
-    // 2. Finite State Machine Transitions
+    // 2. State Machine Transitions
     switch (this.state) {
       case 'IDLE':
       case 'SEARCHING':
       case 'TRACKING_HUMAN':
       case 'RETURNING': {
-        // Check if curiosity glance should trigger
+        // Check if curiosity glance should trigger (only when enableCuriosity is active)
         const shouldTriggerGlance =
+          this.config.enableCuriosity &&
           motionTarget &&
           motionTarget.confidence >= this.config.curiosityThreshold &&
           !isCooldownActive &&
@@ -91,7 +96,6 @@ export class AttentionArbitrator {
         if (shouldTriggerGlance) {
           this.state = 'CURIOUS_GLANCE';
           this.glanceStartTime = now;
-          // Vary glance duration based on motion energy
           const energy = motionTarget.metadata?.motionEnergy ?? 0.5;
           this.glanceDuration =
             this.config.curiosityMinDurationMs +
@@ -102,7 +106,7 @@ export class AttentionArbitrator {
           activeSource = 'motion';
           confidence = motionTarget.confidence;
           isGlancing = true;
-          curiosityDilation = 0.18; // Slight pupil expansion for curiosity
+          curiosityDilation = 0.18;
         } else if (bestHumanTarget) {
           this.state = 'TRACKING_HUMAN';
           targetPoint = bestHumanTarget.point;
@@ -128,7 +132,6 @@ export class AttentionArbitrator {
       case 'CURIOUS_GLANCE': {
         const elapsed = now - this.glanceStartTime;
         if (elapsed < this.glanceDuration) {
-          // Continue glancing at motion point (or slightly track if motion moves)
           if (motionTarget && motionTarget.confidence > 0.4) {
             this.glanceTargetPoint = {
               x: this.glanceTargetPoint.x * 0.8 + motionTarget.point.x * 0.2,
@@ -141,7 +144,6 @@ export class AttentionArbitrator {
           isGlancing = true;
           curiosityDilation = 0.2;
         } else {
-          // Glance finished -> transition to RETURNING
           this.state = 'RETURNING';
           this.lastGlanceEndTime = now;
 

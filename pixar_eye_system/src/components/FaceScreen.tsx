@@ -65,7 +65,7 @@ export const FaceScreen: React.FC = () => {
   } = useVisionPerception({
     enabled: isVisionTracking,
     enablePose: true,
-    enableCuriosity: true,
+    enableCuriosity: false, // Strict human priority: Eyes -> Face -> Body
     curiositySensitivity,
     onAttentionUpdate: handleAttentionUpdate,
   });
