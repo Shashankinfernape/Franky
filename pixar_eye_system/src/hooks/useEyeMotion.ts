@@ -52,8 +52,8 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
       const delay = (2000 + Math.random() * 2500) / saccadeSpeedMultiplier;
       saccadeTimer = setTimeout(() => {
         microOffsetRef.current = {
-          x: (Math.random() - 0.5) * 0.018,
-          y: (Math.random() - 0.5) * 0.012,
+          x: (Math.random() - 0.5) * 0.015,
+          y: (Math.random() - 0.5) * 0.010,
         };
         scheduleSaccade();
       }, delay);
@@ -90,17 +90,17 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
     };
   }, [enableMicroSaccades, enableIdleLookAround, saccadeSpeedMultiplier]);
 
-  // 60 FPS Responsive Natural Pixar Spring Engine
+  // 60 FPS Ultra-Fast Responsive Pixar Spring Engine
   useEffect(() => {
     let animFrameId: number;
     let lastFrameTime = performance.now();
 
     const updatePhysics = (now: number) => {
-      const dt = Math.min(0.04, Math.max(0.001, (now - lastFrameTime) / 1000));
+      const dt = Math.min(0.033, Math.max(0.001, (now - lastFrameTime) / 1000));
       lastFrameTime = now;
 
       // Breathing Rhythm (0.2 Hz sinusoidal drift)
-      const breathingY = enableBreathing ? Math.sin(now * 0.0015) * 0.006 : 0;
+      const breathingY = enableBreathing ? Math.sin(now * 0.0015) * 0.005 : 0;
       const breathingX = enableBreathing ? Math.cos(now * 0.0008) * 0.003 : 0;
 
       // Desired target + micro offsets + breathing
@@ -108,15 +108,15 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
       const finalTargetY = targetRef.current.y + microOffsetRef.current.y + breathingY;
 
       if (isUserInteractingRef.current && isTouchRef.current) {
-        // Direct touch tracking
+        // Direct touch tracking (Instant)
         gazeRef.current.x = finalTargetX;
         gazeRef.current.y = finalTargetY;
         velocityRef.current.x = 0;
         velocityRef.current.y = 0;
       } else {
-        // Balanced Pixar Spring Parameters (Snappy ~150ms eye tracking with zero drag)
-        const stiffness = 220.0; // Responsive tracking speed
-        const damping = 22.0;    // Perfectly damped: no overshoot, crisp stop
+        // Fast, Ultra-Responsive Spring Dynamics (Fast ~40-60ms response)
+        const stiffness = 650.0; // High responsiveness
+        const damping = 38.0;    // Critically damped: instant stop with zero vibration
 
         // Spring acceleration
         const forceX = (finalTargetX - gazeRef.current.x) * stiffness;
@@ -130,8 +130,8 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
         velocityRef.current.x *= Math.max(0, 1 - damping * dt);
         velocityRef.current.y *= Math.max(0, 1 - damping * dt);
 
-        // Speed cap for safety
-        const maxSpeed = 5.0; // Responsive speed limit
+        // Fast speed limit
+        const maxSpeed = 18.0;
         const currentSpeed = Math.sqrt(
           velocityRef.current.x * velocityRef.current.x +
           velocityRef.current.y * velocityRef.current.y
