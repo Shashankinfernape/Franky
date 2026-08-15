@@ -121,7 +121,7 @@ export const CalibrationStudio: React.FC<CalibrationStudioProps> = ({
   useEffect(() => {
     if (isOpen && step !== 'intro' && step !== 'complete') {
       onSetCalibrationGaze(STEP_CONFIGS[step].defaultGaze);
-    } else if (!isOpen) {
+    } else {
       onSetCalibrationGaze(null);
     }
   }, [isOpen, step, onSetCalibrationGaze]);
@@ -167,12 +167,13 @@ export const CalibrationStudio: React.FC<CalibrationStudioProps> = ({
           down: point,
         };
         gazeCalibration.saveProfile(finalProfile);
+        onSetCalibrationGaze(null);
         setStep('complete');
       }
 
       return updated;
     });
-  }, [step, calibrationGaze, currentPupilCamera]);
+  }, [step, calibrationGaze, currentPupilCamera, onSetCalibrationGaze]);
 
   // Spacebar / Enter shortcut to lock
   useEffect(() => {

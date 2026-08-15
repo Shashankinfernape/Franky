@@ -1,6 +1,7 @@
 import React from 'react';
 import type { AttentionOutput } from '../types/vision';
-import { Eye, ShieldAlert, EyeOff, Target, Sparkles, ArrowLeftRight } from 'lucide-react';
+import { gazeCalibration } from '../services/gazeCalibration';
+import { Eye, ShieldAlert, EyeOff, Target, Sparkles, Database } from 'lucide-react';
 
 interface VisionHUDProps {
   attentionData: AttentionOutput | null;
@@ -11,7 +12,6 @@ interface VisionHUDProps {
   onToggleOpen: () => void;
   onRecalibrate?: () => void;
   onOpenCalibrationStudio?: () => void;
-  onToggleInvertX?: () => void;
 }
 
 export const VisionHUD: React.FC<VisionHUDProps> = ({
@@ -23,7 +23,6 @@ export const VisionHUD: React.FC<VisionHUDProps> = ({
   onToggleOpen,
   onRecalibrate,
   onOpenCalibrationStudio,
-  onToggleInvertX,
 }) => {
   if (!cameraActive && !isLoading && !error) return null;
 
@@ -31,6 +30,7 @@ export const VisionHUD: React.FC<VisionHUDProps> = ({
   const confidence = Math.round((attentionData?.confidence || 0) * 100);
   const target = attentionData?.smoothedPoint || { x: 0, y: 0 };
   const isLocked = state === 'EYES_LOCKED';
+  const hasCustom = gazeCalibration.hasCustomCalibration();
 
   return (
     <div className="fixed top-4 right-4 z-50 flex flex-col items-end gap-2 select-none pointer-events-auto font-mono">
@@ -114,6 +114,20 @@ export const VisionHUD: React.FC<VisionHUDProps> = ({
             </div>
 
             <div className="flex justify-between text-slate-300">
+              <span>Trajectory Memory:</span>
+              <span className={hasCustom ? 'text-emerald-400 font-semibold flex items-center gap-1' : 'text-slate-400'}>
+                {hasCustom ? (
+                  <>
+                    <Database className="w-3 h-3" />
+                    <span>Cached in Browser</span>
+                  </>
+                ) : (
+                  'Default Baseline'
+                )}
+              </span>
+            </div>
+
+            <div className="flex justify-between text-slate-300">
               <span>Lock Confidence:</span>
               <span className="text-cyan-300">{confidence}%</span>
             </div>
@@ -125,16 +139,6 @@ export const VisionHUD: React.FC<VisionHUDProps> = ({
             </div>
 
             <div className="flex flex-col gap-1.5 pt-1">
-              {onToggleInvertX && (
-                <button
-                  onClick={onToggleInvertX}
-                  className="w-full py-1.5 px-2 bg-slate-800 hover:bg-slate-700 border border-white/15 text-cyan-300 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow"
-                >
-                  <ArrowLeftRight className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Flip Left / Right Direction</span>
-                </button>
-              )}
-
               {onOpenCalibrationStudio && (
                 <button
                   onClick={onOpenCalibrationStudio}
@@ -151,7 +155,7 @@ export const VisionHUD: React.FC<VisionHUDProps> = ({
                   className="w-full py-1 px-2 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 rounded-xl text-[10px] flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
                 >
                   <Target className="w-3 h-3 text-cyan-400" />
-                  <span>Quick Re-Center Baseline</span>
+                  <span>Reset to Default Calibration</span>
                 </button>
               )}
             </div>

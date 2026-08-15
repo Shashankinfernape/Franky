@@ -15,12 +15,13 @@ export interface CalibrationProfile {
   down: CalibrationPoint;
 }
 
-const STORAGE_KEY = 'franky_eye_calibration_v10';
+// Stable permanent localStorage key for persistent browser caching
+const STORAGE_KEY = 'franky_custom_calibration_permanent_v1';
 
-// Default calibration profile (wide, smooth, natural room span)
+// Default initial calibration profile
 const DEFAULT_PROFILE: CalibrationProfile = {
   id: 'default',
-  timestamp: Date.now(),
+  timestamp: 0,
   center: {
     screenGaze: { x: 0.0, y: 0.0 },
     pupilCamera: { x: 0.50, y: 0.40 },
@@ -54,7 +55,11 @@ export class GazeCalibrationManager {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.center && parsed.right && parsed.left) {
+          console.log('[Calibration] Loaded cached profile from localStorage:', parsed);
+          return parsed;
+        }
       }
     } catch (e) {
       console.warn('[Calibration] Failed to read from localStorage:', e);
@@ -66,16 +71,17 @@ export class GazeCalibrationManager {
     this.profile = profile;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
-      console.log('[Calibration] Saved custom profile:', profile);
+      console.log('[Calibration] Successfully cached profile to localStorage:', profile);
     } catch (e) {
       console.warn('[Calibration] Failed to save to localStorage:', e);
     }
   }
 
   resetToDefault(): void {
-    this.profile = { ...DEFAULT_PROFILE, timestamp: Date.now() };
+    this.profile = { ...DEFAULT_PROFILE };
     try {
       localStorage.removeItem(STORAGE_KEY);
+      console.log('[Calibration] Cleared cached calibration, reset to default.');
     } catch (e) {
       console.warn(e);
     }
@@ -91,7 +97,7 @@ export class GazeCalibrationManager {
 
   /**
    * Continuous Smooth Gaze Interpolation
-   * Enforces minimum span of 0.25 to prevent tiny micro-spans from causing sudden jumps to the window
+   * Enforces minimum span of 0.28 to prevent sudden jumps to the window
    */
   mapCameraToScreenGaze(rawPupil: Point2D): Point2D {
     const u = rawPupil.x;
@@ -114,7 +120,6 @@ export class GazeCalibrationManager {
     let gazeY = center.screenGaze.y;
 
     // Continuous Horizontal Mapping:
-    // Determine whether user moves toward right calibration point
     const rightIsLowerU = right.pupilCamera.x < uCenter;
     if ((rightIsLowerU && du < 0) || (!rightIsLowerU && du > 0)) {
       const t = Math.min(1.0, Math.abs(du) / spanRight);
