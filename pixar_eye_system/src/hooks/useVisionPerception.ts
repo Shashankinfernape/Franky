@@ -132,7 +132,7 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
     };
   }, [enabled, isReady, startCamera, stopCamera]);
 
-  // Main High-Precision Eye Tracking Loop
+  // Direct Human Mutual Eye-Contact Tracking Loop
   useEffect(() => {
     if (!cameraActive || !isReady) return;
 
@@ -147,7 +147,7 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
       if (video && video.readyState >= 2 && !video.paused) {
         const targets: VisionTarget[] = [];
 
-        // Run Eye/Iris Landmarking (~30-60 FPS)
+        // High-Precision Eye Tracking Tick (~30-60 FPS)
         if (faceLandmarkerRef.current && now - lastFaceTimeRef.current >= 24) {
           lastFaceTimeRef.current = now;
           try {
@@ -155,11 +155,11 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
             if (faceResult.faceLandmarks && faceResult.faceLandmarks.length > 0) {
               const landmarks = faceResult.faceLandmarks[0];
 
-              // Landmark Indices:
-              // Left Iris: Center 468 (Boundary: 469, 470, 471, 472)
-              // Right Iris: Center 473 (Boundary: 474, 475, 476, 477)
-              // Left Eye: Inner 133, Outer 33, Top 159, Bottom 145
-              // Right Eye: Inner 362, Outer 263, Top 386, Bottom 374
+              // Key Iris & Eye Landmarks
+              // Left Iris: 468, Right Iris: 473
+              // Left Eyelids: Top 159, Bottom 145, Inner 133, Outer 33
+              // Right Eyelids: Top 386, Bottom 374, Inner 362, Outer 263
+              // Inter-Eye Nose Bridge: 168 / 6
 
               const hasIris = landmarks.length >= 478;
 
@@ -167,62 +167,47 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
                 const leftIris = landmarks[468];
                 const rightIris = landmarks[473];
 
-                const leftInner = landmarks[133];
-                const leftOuter = landmarks[33];
-                const leftEyeWidth = Math.abs(leftInner.x - leftOuter.x) || 0.01;
-                const leftEyeCenterX = (leftInner.x + leftOuter.x) / 2;
-                const leftEyeCenterY = (landmarks[159].y + landmarks[145].y) / 2;
+                const leftEyeWidth = Math.abs(landmarks[133].x - landmarks[33].x) || 0.01;
                 const leftEyeHeight = Math.abs(landmarks[145].y - landmarks[159].y) || 0.01;
 
-                const rightInner = landmarks[362];
-                const rightOuter = landmarks[263];
-                const rightEyeWidth = Math.abs(rightOuter.x - rightInner.x) || 0.01;
-                const rightEyeCenterX = (rightInner.x + rightOuter.x) / 2;
-                const rightEyeCenterY = (landmarks[386].y + landmarks[374].y) / 2;
+                const rightEyeWidth = Math.abs(landmarks[263].x - landmarks[362].x) || 0.01;
                 const rightEyeHeight = Math.abs(landmarks[374].y - landmarks[386].y) || 0.01;
 
-                // Eye aspect ratio (open eye check)
                 const leftEAR = leftEyeHeight / leftEyeWidth;
                 const rightEAR = rightEyeHeight / rightEyeWidth;
-                const isEyesOpen = leftEAR > 0.11 && rightEAR > 0.11;
+                const isEyesOpen = leftEAR > 0.10 && rightEAR > 0.10;
 
                 if (isEyesOpen && leftIris && rightIris) {
-                  // 1. Physical 3D location of person relative to device camera
-                  const eyeCenterX = (leftEyeCenterX + rightEyeCenterX) / 2;
-                  const eyeCenterY = (leftEyeCenterY + rightEyeCenterY) / 2;
+                  // Physical 3D location of the user's pupils in the camera frustum
+                  const pupilMidX = (leftIris.x + rightIris.x) / 2;
+                  const pupilMidY = (leftIris.y + rightIris.y) / 2;
 
-                  // Screen X: when user is on the LEFT of the camera (X < 0.5), spatialX is negative (looks LEFT)
-                  // When user is on the RIGHT of the camera (X > 0.5), spatialX is positive (looks RIGHT)
-                  const spatialX = (eyeCenterX - 0.5) * 2.0;
+                  // Nose bridge anchor (landmark 168 / 6) between eyes
+                  const bridgeX = landmarks[168]?.x ?? pupilMidX;
+                  const bridgeY = landmarks[168]?.y ?? pupilMidY;
 
-                  // Vertical Calibration: Baseline eye level in webcam is ~0.38 (slightly above middle)
-                  // When user is centered -> spatialY = 0.0 (no downward gaze bug!)
-                  const spatialY = (eyeCenterY - 0.38) * 2.2;
+                  // Inter-pupil distance (depth / scale factor)
+                  const pupilDistance = Math.abs(rightIris.x - leftIris.x) || 0.08;
+                  const depthFactor = Math.max(0.7, Math.min(1.4, 0.12 / pupilDistance));
 
-                  // 2. Iris Pupil Offset inside eye socket
-                  const leftOffsetX = (leftIris.x - leftEyeCenterX) / (leftEyeWidth * 0.40);
-                  // Eyelid droop baseline compensation (-0.20): upper lid naturally covers top iris
-                  const leftOffsetY =
-                    (leftIris.y - leftEyeCenterY) / (leftEyeHeight * 0.40) - 0.20;
+                  // 1. Direct Line-of-Sight X (Screen Horizontal Alignment):
+                  // Camera center is at X = 0.50.
+                  // When user is to the Left (X < 0.5), character turns pupils Left to lock with user's eyes.
+                  // When user is to the Right (X > 0.5), character turns pupils Right.
+                  const eyeGazeX = (pupilMidX * 0.7 + bridgeX * 0.3 - 0.5) * 1.85 * depthFactor;
 
-                  const rightOffsetX = (rightIris.x - rightEyeCenterX) / (rightEyeWidth * 0.40);
-                  const rightOffsetY =
-                    (rightIris.y - rightEyeCenterY) / (rightEyeHeight * 0.40) - 0.20;
+                  // 2. Direct Line-of-Sight Y (Vertical Eye-Level Alignment):
+                  // Webcam is mounted at top bezel. Human eyes naturally sit at Y ~ 0.38 when looking at screen.
+                  // This calibrated baseline ensures 0.0 vertical gaze when looking directly into the screen.
+                  const eyeGazeY = (pupilMidY * 0.7 + bridgeY * 0.3 - 0.38) * 2.10 * depthFactor;
 
-                  const avgIrisX = (leftOffsetX + rightOffsetX) / 2;
-                  const avgIrisY = (leftOffsetY + rightOffsetY) / 2;
-
-                  // 3. Perfected Trajectory Fusion
-                  const rawGazeX = spatialX * 0.85 + avgIrisX * 0.40;
-                  const rawGazeY = spatialY * 0.85 + avgIrisY * 0.35;
-
-                  const clampedX = Math.max(-1.0, Math.min(1.0, rawGazeX));
-                  const clampedY = Math.max(-1.0, Math.min(1.0, rawGazeY));
+                  const clampedX = Math.max(-1.0, Math.min(1.0, eyeGazeX));
+                  const clampedY = Math.max(-1.0, Math.min(1.0, eyeGazeY));
 
                   targets.push({
                     source: 'iris',
                     point: { x: clampedX, y: clampedY },
-                    confidence: 0.98,
+                    confidence: 0.99,
                     timestamp: now,
                     metadata: {
                       irisLeft: { x: leftIris.x, y: leftIris.y },
@@ -239,7 +224,7 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
           }
         }
 
-        // Arbitrate Attention (Eyes Only)
+        // Arbitrate Attention (Mutual Eye Contact)
         const output = arbitratorRef.current.update(targets, now);
         setAttentionData(output);
         if (onAttentionUpdateRef.current) {

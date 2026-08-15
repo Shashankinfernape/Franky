@@ -117,9 +117,9 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
         velocityRef.current.x = 0;
         velocityRef.current.y = 0;
       } else {
-        // Spring dynamics parameters (Snappy Pixar eye darts)
-        const stiffness = 380;
-        const damping = 28;
+        // Spring dynamics parameters (Responsive, lifelike Pixar eye tracking)
+        const stiffness = 440;
+        const damping = 32;
         const dt = 1 / 60;
 
         // Spring force
