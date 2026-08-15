@@ -1,6 +1,6 @@
 import React from 'react';
 import type { AttentionOutput } from '../types/vision';
-import { Eye, ShieldAlert, EyeOff } from 'lucide-react';
+import { Eye, ShieldAlert, EyeOff, Target } from 'lucide-react';
 
 interface VisionHUDProps {
   attentionData: AttentionOutput | null;
@@ -9,6 +9,7 @@ interface VisionHUDProps {
   error: string | null;
   isOpen: boolean;
   onToggleOpen: () => void;
+  onRecalibrate?: () => void;
 }
 
 export const VisionHUD: React.FC<VisionHUDProps> = ({
@@ -18,6 +19,7 @@ export const VisionHUD: React.FC<VisionHUDProps> = ({
   error,
   isOpen,
   onToggleOpen,
+  onRecalibrate,
 }) => {
   if (!cameraActive && !isLoading && !error) return null;
 
@@ -101,14 +103,14 @@ export const VisionHUD: React.FC<VisionHUDProps> = ({
           {/* Metrics */}
           <div className="space-y-1.5 text-[11px]">
             <div className="flex justify-between text-slate-300">
-              <span>Pupil Coordinates:</span>
+              <span>Pupil Vector:</span>
               <span className="text-cyan-300">
                 X:{target.x.toFixed(2)} Y:{target.y.toFixed(2)}
               </span>
             </div>
 
             <div className="flex justify-between text-slate-300">
-              <span>Eye Lock Confidence:</span>
+              <span>Lock Confidence:</span>
               <span className="text-cyan-300">{confidence}%</span>
             </div>
             <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
@@ -117,6 +119,16 @@ export const VisionHUD: React.FC<VisionHUDProps> = ({
                 style={{ width: `${confidence}%` }}
               />
             </div>
+
+            {onRecalibrate && (
+              <button
+                onClick={onRecalibrate}
+                className="w-full mt-2 py-1.5 px-2 bg-cyan-950/70 hover:bg-cyan-900 border border-cyan-500/40 text-cyan-300 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow"
+              >
+                <Target className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Recalibrate Eye Level</span>
+              </button>
+            )}
           </div>
         </div>
       )}

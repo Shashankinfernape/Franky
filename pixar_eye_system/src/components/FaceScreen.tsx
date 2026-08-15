@@ -61,6 +61,7 @@ export const FaceScreen: React.FC = () => {
     error: visionError,
     cameraActive,
     attentionData,
+    recalibrateBaseline,
   } = useVisionPerception({
     enabled: isVisionTracking,
     onAttentionUpdate: handleAttentionUpdate,
@@ -254,6 +255,7 @@ export const FaceScreen: React.FC = () => {
         error={visionError}
         isOpen={isVisionHUDOpen}
         onToggleOpen={() => setIsVisionHUDOpen(!isVisionHUDOpen)}
+        onRecalibrate={recalibrateBaseline}
       />
 
       <ControlPanel

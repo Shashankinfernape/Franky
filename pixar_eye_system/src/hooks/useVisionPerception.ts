@@ -25,6 +25,11 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
   const faceLandmarkerRef = useRef<FaceLandmarker | null>(null);
   const arbitratorRef = useRef<AttentionArbitrator>(new AttentionArbitrator());
 
+  // Adaptive Vertical Baseline Auto-Calibrator (Mona Lisa Eye Level)
+  const baselineYRef = useRef<number>(0.44);
+  const isBaselineCalibratedRef = useRef<boolean>(false);
+  const sampleCountRef = useRef<number>(0);
+
   const animFrameRef = useRef<number | null>(null);
   const lastFaceTimeRef = useRef<number>(0);
 
@@ -102,6 +107,10 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
       await videoRef.current.play();
       setCameraActive(true);
       setError(null);
+      // Reset baseline calibration on new camera session
+      isBaselineCalibratedRef.current = false;
+      sampleCountRef.current = 0;
+      baselineYRef.current = 0.44;
     } catch (camErr: unknown) {
       console.error('[Vision] Camera access error:', camErr);
       setError('Camera access denied or unavailable');
@@ -132,7 +141,13 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
     };
   }, [enabled, isReady, startCamera, stopCamera]);
 
-  // Direct Human Mutual Eye-Contact Tracking Loop
+  // Recalibrate eye baseline manually or automatically
+  const recalibrateBaseline = useCallback(() => {
+    isBaselineCalibratedRef.current = false;
+    sampleCountRef.current = 0;
+  }, []);
+
+  // Main Mona-Lisa Direct Eye Contact Tracking Loop
   useEffect(() => {
     if (!cameraActive || !isReady) return;
 
@@ -178,31 +193,38 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
                 const isEyesOpen = leftEAR > 0.10 && rightEAR > 0.10;
 
                 if (isEyesOpen && leftIris && rightIris) {
-                  // Physical 3D location of the user's pupils in the camera frustum
+                  // Physical 3D pupil midpoint
                   const pupilMidX = (leftIris.x + rightIris.x) / 2;
                   const pupilMidY = (leftIris.y + rightIris.y) / 2;
 
-                  // Nose bridge anchor (landmark 168 / 6) between eyes
-                  const bridgeX = landmarks[168]?.x ?? pupilMidX;
-                  const bridgeY = landmarks[168]?.y ?? pupilMidY;
+                  // Adaptive Baseline Calibration (learns user's sitting eye height over first 30 frames)
+                  if (!isBaselineCalibratedRef.current) {
+                    sampleCountRef.current++;
+                    baselineYRef.current =
+                      baselineYRef.current * 0.85 + pupilMidY * 0.15;
+                    if (sampleCountRef.current > 35) {
+                      isBaselineCalibratedRef.current = true;
+                    }
+                  }
 
-                  // Inter-pupil distance (depth / scale factor)
+                  // Inter-pupil distance in camera frame for depth scaling
                   const pupilDistance = Math.abs(rightIris.x - leftIris.x) || 0.08;
-                  const depthFactor = Math.max(0.7, Math.min(1.4, 0.12 / pupilDistance));
+                  const depthFactor = Math.max(0.75, Math.min(1.35, 0.11 / pupilDistance));
 
-                  // 1. Direct Line-of-Sight X (Screen Horizontal Alignment):
-                  // Camera center is at X = 0.50.
-                  // When user is to the Left (X < 0.5), character turns pupils Left to lock with user's eyes.
-                  // When user is to the Right (X > 0.5), character turns pupils Right.
-                  const eyeGazeX = (pupilMidX * 0.7 + bridgeX * 0.3 - 0.5) * 1.85 * depthFactor;
+                  // 1. HORIZONTAL TRAJECTORY (Natural Selfie Alignment):
+                  // In camera: moving to user's RIGHT produces pupilMidX < 0.5.
+                  // Negative sign ensures when you move RIGHT, Franky turns eyes to the RIGHT to look into your eyes!
+                  // When you move LEFT, Franky turns eyes to the LEFT!
+                  const rawGazeX = -(pupilMidX - 0.5) * 1.95 * depthFactor;
 
-                  // 2. Direct Line-of-Sight Y (Vertical Eye-Level Alignment):
-                  // Webcam is mounted at top bezel. Human eyes naturally sit at Y ~ 0.38 when looking at screen.
-                  // This calibrated baseline ensures 0.0 vertical gaze when looking directly into the screen.
-                  const eyeGazeY = (pupilMidY * 0.7 + bridgeY * 0.3 - 0.38) * 2.10 * depthFactor;
+                  // 2. VERTICAL TRAJECTORY (Mona Lisa Eye Contact):
+                  // Difference from user's calibrated eye level + upward compensation (-0.22)
+                  // to place pupils dead-center in Franky's eye socket when looking at screen!
+                  const deltaY = (pupilMidY - baselineYRef.current) * 2.2 * depthFactor;
+                  const rawGazeY = deltaY - 0.18;
 
-                  const clampedX = Math.max(-1.0, Math.min(1.0, eyeGazeX));
-                  const clampedY = Math.max(-1.0, Math.min(1.0, eyeGazeY));
+                  const clampedX = Math.max(-1.0, Math.min(1.0, rawGazeX));
+                  const clampedY = Math.max(-1.0, Math.min(1.0, rawGazeY));
 
                   targets.push({
                     source: 'iris',
@@ -224,7 +246,7 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
           }
         }
 
-        // Arbitrate Attention (Mutual Eye Contact)
+        // Arbitrate Attention (Mona Lisa Direct Eye Contact)
         const output = arbitratorRef.current.update(targets, now);
         setAttentionData(output);
         if (onAttentionUpdateRef.current) {
@@ -253,5 +275,6 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
     videoElement: videoRef.current,
     startCamera,
     stopCamera,
+    recalibrateBaseline,
   };
 }
