@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { FilesetResolver, FaceLandmarker } from '@mediapipe/tasks-vision';
+import { FilesetResolver, FaceLandmarker, GestureRecognizer } from '@mediapipe/tasks-vision';
 import type { AttentionOutput, Point2D, VisionTarget } from '../types/vision';
 import { AttentionArbitrator } from '../services/attentionArbitrator';
 import { gazeCalibration } from '../services/gazeCalibration';
@@ -7,6 +7,8 @@ import { gazeCalibration } from '../services/gazeCalibration';
 const WASM_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm';
 const FACE_MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
+const GESTURE_MODEL_URL =
+  'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task';
 
 export interface UseVisionPerceptionOptions {
   enabled: boolean;
@@ -23,13 +25,16 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
   const [attentionData, setAttentionData] = useState<AttentionOutput | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [currentPupilCamera, setCurrentPupilCamera] = useState<Point2D | null>(null);
+  const [isThumbUp, setIsThumbUp] = useState<boolean>(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const faceLandmarkerRef = useRef<FaceLandmarker | null>(null);
+  const gestureRecognizerRef = useRef<GestureRecognizer | null>(null);
   const arbitratorRef = useRef<AttentionArbitrator>(new AttentionArbitrator());
 
   const animFrameRef = useRef<number | null>(null);
   const lastFaceTimeRef = useRef<number>(0);
+  const lastGestureTimeRef = useRef<number>(0);
 
   const onAttentionUpdateRef = useRef(onAttentionUpdate);
   onAttentionUpdateRef.current = onAttentionUpdate;
@@ -37,7 +42,7 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
   const forcedGazeRef = useRef<Point2D | null>(forcedGaze);
   forcedGazeRef.current = forcedGaze;
 
-  // Initialize MediaPipe FaceLandmarker with Iris Refinement
+  // Initialize MediaPipe FaceLandmarker + GestureRecognizer (for Hands-Free Thumbs Up)
   useEffect(() => {
     let isCancelled = false;
 
@@ -50,6 +55,7 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
         const vision = await FilesetResolver.forVisionTasks(WASM_CDN);
         if (isCancelled) return;
 
+        // Load FaceLandmarker
         const faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
           baseOptions: {
             modelAssetPath: FACE_MODEL_URL,
@@ -63,11 +69,29 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
 
         if (isCancelled) return;
         faceLandmarkerRef.current = faceLandmarker;
+
+        // Load GestureRecognizer for live Thumbs Up detection
+        try {
+          const gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
+            baseOptions: {
+              modelAssetPath: GESTURE_MODEL_URL,
+              delegate: 'GPU',
+            },
+            runningMode: 'VIDEO',
+            numHands: 1,
+          });
+          if (!isCancelled) {
+            gestureRecognizerRef.current = gestureRecognizer;
+          }
+        } catch (gErr) {
+          console.warn('[Vision] GestureRecognizer optional load warning:', gErr);
+        }
+
         setIsReady(true);
         setIsLoading(false);
       } catch (err: unknown) {
         if (!isCancelled) {
-          console.error('[Vision] Failed to initialize MediaPipe FaceLandmarker:', err);
+          console.error('[Vision] Failed to initialize MediaPipe Vision Tasks:', err);
           setError(err instanceof Error ? err.message : 'Failed to load eye tracking model');
           setIsLoading(false);
         }
@@ -124,6 +148,7 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
     }
     setCameraActive(false);
     setCurrentPupilCamera(null);
+    setIsThumbUp(false);
     arbitratorRef.current.reset();
   }, []);
 
@@ -139,7 +164,7 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
     };
   }, [enabled, isReady, startCamera, stopCamera]);
 
-  // Main High-Precision Eye Tracking Loop with Calibration Mapping
+  // Main High-Precision Eye Tracking Loop with Centric Gaze & Gesture Recognition
   useEffect(() => {
     if (!cameraActive || !isReady) return;
 
@@ -169,7 +194,7 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
       if (video && video.readyState >= 2 && !video.paused) {
         const targets: VisionTarget[] = [];
 
-        // High-Precision Eye Tracking Tick (~30-60 FPS)
+        // 1. High-Precision Eye Tracking Tick (~30-60 FPS)
         if (faceLandmarkerRef.current && now - lastFaceTimeRef.current >= 24) {
           lastFaceTimeRef.current = now;
           try {
@@ -228,6 +253,24 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
           }
         }
 
+        // 2. Gesture Recognition Tick for Thumbs Up (~15-20 FPS)
+        if (gestureRecognizerRef.current && now - lastGestureTimeRef.current >= 50) {
+          lastGestureTimeRef.current = now;
+          try {
+            const gestureResult = gestureRecognizerRef.current.recognizeForVideo(video, now);
+            let thumbFound = false;
+            if (gestureResult.gestures && gestureResult.gestures.length > 0) {
+              const topGesture = gestureResult.gestures[0][0];
+              if (topGesture && topGesture.categoryName === 'Thumb_Up' && topGesture.score > 0.60) {
+                thumbFound = true;
+              }
+            }
+            setIsThumbUp(thumbFound);
+          } catch (gErr) {
+            // ignore frame skip
+          }
+        }
+
         // Only update arbitrator when not in forced calibration gaze mode
         if (!forcedGazeRef.current) {
           const output = arbitratorRef.current.update(targets, now);
@@ -262,6 +305,7 @@ export function useVisionPerception(options: UseVisionPerceptionOptions) {
     cameraActive,
     attentionData,
     currentPupilCamera,
+    isThumbUp,
     videoElement: videoRef.current,
     startCamera,
     stopCamera,

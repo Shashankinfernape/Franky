@@ -15,9 +15,9 @@ export interface CalibrationProfile {
   down: CalibrationPoint;
 }
 
-const STORAGE_KEY = 'franky_eye_calibration_v2';
+const STORAGE_KEY = 'franky_eye_calibration_v3';
 
-// Default fallback calibration (standard 60cm laptop baseline)
+// Default fallback calibration (centric focused gaze)
 const DEFAULT_PROFILE: CalibrationProfile = {
   id: 'default',
   timestamp: Date.now(),
@@ -26,20 +26,20 @@ const DEFAULT_PROFILE: CalibrationProfile = {
     pupilCamera: { x: 0.50, y: 0.44 },
   },
   right: {
-    screenGaze: { x: 0.70, y: 0.0 },
-    pupilCamera: { x: 0.20, y: 0.44 },
+    screenGaze: { x: 0.55, y: 0.0 },
+    pupilCamera: { x: 0.22, y: 0.44 },
   },
   left: {
-    screenGaze: { x: -0.70, y: 0.0 },
-    pupilCamera: { x: 0.80, y: 0.44 },
+    screenGaze: { x: -0.55, y: 0.0 },
+    pupilCamera: { x: 0.78, y: 0.44 },
   },
   up: {
-    screenGaze: { x: 0.0, y: -0.55 },
-    pupilCamera: { x: 0.50, y: 0.22 },
+    screenGaze: { x: 0.0, y: -0.42 },
+    pupilCamera: { x: 0.50, y: 0.25 },
   },
   down: {
-    screenGaze: { x: 0.0, y: 0.45 },
-    pupilCamera: { x: 0.50, y: 0.65 },
+    screenGaze: { x: 0.0, y: 0.35 },
+    pupilCamera: { x: 0.50, y: 0.62 },
   },
 };
 
@@ -91,7 +91,7 @@ export class GazeCalibrationManager {
 
   /**
    * Piecewise Bilinear Interpolation Transform
-   * Maps measured camera pupil coordinates (u, v) [0, 1] directly to calibrated screen gaze [-1, 1]
+   * Maps measured camera pupil coordinates (u, v) [0, 1] directly to calibrated centric screen gaze [-1, 1]
    */
   mapCameraToScreenGaze(rawPupil: Point2D): Point2D {
     const { center, right, left, up, down } = this.profile;
@@ -111,12 +111,12 @@ export class GazeCalibrationManager {
     if (u <= uCenter) {
       const uRight = right.pupilCamera.x;
       const span = Math.abs(uRight - uCenter) || 0.25;
-      const t = (uCenter - u) / span; // 0 at center, 1 at right target
+      const t = Math.min(1.2, Math.max(0, (uCenter - u) / span)); // smooth linear interpolation
       gazeX = t * right.screenGaze.x;
     } else {
       const uLeft = left.pupilCamera.x;
       const span = Math.abs(uLeft - uCenter) || 0.25;
-      const t = (u - uCenter) / span; // 0 at center, 1 at left target
+      const t = Math.min(1.2, Math.max(0, (u - uCenter) / span));
       gazeX = t * left.screenGaze.x;
     }
 
@@ -126,12 +126,12 @@ export class GazeCalibrationManager {
     if (v <= vCenter) {
       const vUp = up.pupilCamera.y;
       const span = Math.abs(vCenter - vUp) || 0.20;
-      const t = (vCenter - v) / span;
+      const t = Math.min(1.2, Math.max(0, (vCenter - v) / span));
       gazeY = t * up.screenGaze.y;
     } else {
       const vDown = down.pupilCamera.y;
       const span = Math.abs(vDown - vCenter) || 0.20;
-      const t = (v - vCenter) / span;
+      const t = Math.min(1.2, Math.max(0, (v - vCenter) / span));
       gazeY = t * down.screenGaze.y;
     }
 

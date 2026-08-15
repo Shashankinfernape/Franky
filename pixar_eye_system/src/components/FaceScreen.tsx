@@ -67,6 +67,7 @@ export const FaceScreen: React.FC = () => {
     cameraActive,
     attentionData,
     currentPupilCamera,
+    isThumbUp,
     recalibrateBaseline,
   } = useVisionPerception({
     enabled: isVisionTracking,
@@ -294,6 +295,7 @@ export const FaceScreen: React.FC = () => {
           setCalibrationForcedGaze(null);
         }}
         currentPupilCamera={currentPupilCamera}
+        isThumbUp={isThumbUp}
         onSetCalibrationGaze={setCalibrationForcedGaze}
         onSpeak={(text) => streamLocalFallback(text, true)}
       />

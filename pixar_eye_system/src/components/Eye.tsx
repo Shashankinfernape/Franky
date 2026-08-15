@@ -15,18 +15,18 @@ interface EyeProps {
 // McQueen's idle gaze direction per emotion (when not face-tracking)
 const EMOTION_GAZE: Record<EmotionalState, { x: number; y: number }> = {
   neutral:     { x: 0,     y: 0     },
-  happy:       { x: 0,     y: -0.18 },
-  excited:     { x: 0,     y: -0.28 },
-  angry:       { x: 0,     y:  0.15 },
-  sad:         { x: 0.08,  y:  0.28 },
-  sleepy:      { x: 0,     y:  0.40 },
-  focused:     { x: 0,     y:  0.05 },
-  thinking:    { x: -0.35, y: -0.28 },
-  curious:     { x: 0.22,  y: -0.18 },
-  confused:    { x: -0.18, y:  0.05 },
-  embarrassed: { x: 0.32,  y:  0.32 },
-  celebrating: { x: 0,     y: -0.35 },
-  listening:   { x: 0,     y: -0.08 },
+  happy:       { x: 0,     y: -0.12 },
+  excited:     { x: 0,     y: -0.20 },
+  angry:       { x: 0,     y:  0.10 },
+  sad:         { x: 0.05,  y:  0.20 },
+  sleepy:      { x: 0,     y:  0.25 },
+  focused:     { x: 0,     y:  0.03 },
+  thinking:    { x: -0.25, y: -0.18 },
+  curious:     { x: 0.18,  y: -0.12 },
+  confused:    { x: -0.12, y:  0.03 },
+  embarrassed: { x: 0.22,  y:  0.22 },
+  celebrating: { x: 0,     y: -0.25 },
+  listening:   { x: 0,     y: -0.05 },
   talking:     { x: 0,     y:  0    },
 };
 
@@ -40,8 +40,9 @@ export const Eye: React.FC<EyeProps> = ({
 }) => {
   const eGaze = EMOTION_GAZE[emotionState] ?? { x: 0, y: 0 };
   
-  const bX = useTransform(gazeX, (x) => (x * 0.75 + eGaze.x * 0.35) * 14 + 'vw');
-  const bY = useTransform(gazeY, (y) => (y * 0.75 + eGaze.y * 0.35) * 5 + 'vw');
+  // Centric, high-focus eye deflection (7.8vw max horizontal, 3.6vw max vertical)
+  const bX = useTransform(gazeX, (x) => (x * 0.70 + eGaze.x * 0.30) * 7.8 + 'vw');
+  const bY = useTransform(gazeY, (y) => (y * 0.70 + eGaze.y * 0.30) * 3.6 + 'vw');
 
   return (
     <div className="relative flex items-center justify-center pointer-events-none">
