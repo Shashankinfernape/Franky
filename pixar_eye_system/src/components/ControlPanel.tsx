@@ -20,6 +20,7 @@ import {
   Settings,
   X,
   Mic,
+  Radar,
 } from 'lucide-react';
 
 const VOICE_OPTIONS = [
@@ -53,8 +54,8 @@ interface ControlPanelProps {
   currentEmotion: EmotionalState;
   onSelectEmotion: (emotion: EmotionalState) => void;
   onTriggerBlink: () => void;
-  isFaceTracking: boolean;
-  onToggleFaceTracking: () => void;
+  isVisionTracking: boolean;
+  onToggleVisionTracking: () => void;
   enableMicroSaccades: boolean;
   onToggleMicroSaccades: () => void;
   showPhoneFrame: boolean;
@@ -63,6 +64,11 @@ interface ControlPanelProps {
   onChangePupilScale: (val: number) => void;
   activeVoice: string;
   onVoiceChange: (voiceId: string) => void;
+  curiositySensitivity: number;
+  onChangeCuriositySensitivity: (val: number) => void;
+  isVisionHUDOpen: boolean;
+  onToggleVisionHUD: () => void;
+  isVisionReady: boolean;
 }
 
 const EMOTION_ICONS: Record<EmotionalState, React.ReactNode> = {
@@ -86,8 +92,8 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   currentEmotion,
   onSelectEmotion,
   onTriggerBlink,
-  isFaceTracking,
-  onToggleFaceTracking,
+  isVisionTracking,
+  onToggleVisionTracking,
   enableMicroSaccades,
   onToggleMicroSaccades,
   showPhoneFrame,
@@ -96,6 +102,11 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   onChangePupilScale,
   activeVoice,
   onVoiceChange,
+  curiositySensitivity,
+  onChangeCuriositySensitivity,
+  isVisionHUDOpen,
+  onToggleVisionHUD,
+  isVisionReady,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -129,7 +140,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
               <h2 className="text-xs font-bold tracking-wider uppercase text-slate-300">
-                Eye Controls & Expression Settings
+                Eye Controls & Perception Engine
               </h2>
             </div>
 
@@ -150,7 +161,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
           </div>
 
           {/* Settings Body */}
-          <div className="mt-3 space-y-4 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
+          <div className="mt-3 space-y-4 max-h-[55vh] overflow-y-auto pr-1 custom-scrollbar">
             {/* Emotions Grid */}
             <div>
               <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-2">
@@ -212,13 +223,38 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
               </div>
             </div>
 
-            {/* Tuning Sliders & Toggles */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-white/10">
+            {/* Curiosity & Perception Sliders */}
+            <div className="space-y-3 pt-2 border-t border-white/10">
+              {/* Curiosity Sensitivity Slider */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs text-slate-300">
+                  <span className="flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Room Curiosity Sensitivity
+                  </span>
+                  <span className="font-mono text-amber-400">
+                    {curiositySensitivity < 0.35
+                      ? 'Calm (Anti-ADHD)'
+                      : curiositySensitivity > 0.7
+                      ? 'Hyper-Curious'
+                      : 'Balanced'}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="0.9"
+                  step="0.05"
+                  value={curiositySensitivity}
+                  onChange={(e) => onChangeCuriositySensitivity(parseFloat(e.target.value))}
+                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                />
+              </div>
+
               {/* Pupil Scale Slider */}
               <div className="space-y-1">
                 <div className="flex justify-between text-xs text-slate-300">
                   <span>Pupil Size</span>
-                  <span className="font-mono text-amber-400">{customPupilScale.toFixed(2)}x</span>
+                  <span className="font-mono text-cyan-400">{customPupilScale.toFixed(2)}x</span>
                 </div>
                 <input
                   type="range"
@@ -227,48 +263,68 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
                   step="0.05"
                   value={customPupilScale}
                   onChange={(e) => onChangePupilScale(parseFloat(e.target.value))}
-                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-red-500"
+                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
                 />
               </div>
+            </div>
 
-              {/* Toggles */}
-              <div className="flex items-center justify-around gap-2 text-xs">
-                <button
-                  onClick={onToggleFaceTracking}
-                  className={`flex-1 py-1.5 px-2 rounded-lg border flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                    isFaceTracking
-                      ? 'bg-emerald-600/30 border-emerald-500/50 text-emerald-300'
-                      : 'bg-white/5 border-white/10 text-slate-400'
-                  }`}
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  {isFaceTracking ? 'Tracking On' : 'Idle Look'}
-                </button>
+            {/* Toggles */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-white/10 text-xs">
+              <button
+                onClick={onToggleVisionTracking}
+                className={`py-2 px-2 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  isVisionTracking
+                    ? 'bg-cyan-600/30 border-cyan-500/50 text-cyan-200 shadow'
+                    : 'bg-white/5 border-white/10 text-slate-400'
+                }`}
+              >
+                <Camera className="w-3.5 h-3.5 text-cyan-400" />
+                <span>{isVisionTracking ? 'Camera ON' : 'Camera OFF'}</span>
+                {isVisionTracking && (
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      isVisionReady ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+                    }`}
+                  />
+                )}
+              </button>
 
-                <button
-                  onClick={onToggleMicroSaccades}
-                  className={`flex-1 py-1.5 px-2 rounded-lg border flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                    enableMicroSaccades
-                      ? 'bg-blue-600/30 border-blue-500/50 text-blue-300'
-                      : 'bg-white/5 border-white/10 text-slate-400'
-                  }`}
-                >
-                  <Activity className="w-3.5 h-3.5" />
-                  Micro-Motion
-                </button>
+              <button
+                onClick={onToggleVisionHUD}
+                className={`py-2 px-2 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  isVisionHUDOpen
+                    ? 'bg-purple-600/30 border-purple-500/50 text-purple-200'
+                    : 'bg-white/5 border-white/10 text-slate-400'
+                }`}
+              >
+                <Radar className="w-3.5 h-3.5 text-purple-400" />
+                <span>Vision Radar</span>
+              </button>
 
-                <button
-                  onClick={onTogglePhoneFrame}
-                  title="Toggle Phone Chassis Mockup"
-                  className={`py-1.5 px-2.5 rounded-lg border flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                    showPhoneFrame
-                      ? 'bg-amber-600/30 border-amber-500/50 text-amber-300'
-                      : 'bg-white/5 border-white/10 text-slate-400'
-                  }`}
-                >
-                  <Smartphone className="w-3.5 h-3.5" />
-                </button>
-              </div>
+              <button
+                onClick={onToggleMicroSaccades}
+                className={`py-2 px-2 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  enableMicroSaccades
+                    ? 'bg-blue-600/30 border-blue-500/50 text-blue-300'
+                    : 'bg-white/5 border-white/10 text-slate-400'
+                }`}
+              >
+                <Activity className="w-3.5 h-3.5 text-blue-400" />
+                <span>Micro-Motion</span>
+              </button>
+
+              <button
+                onClick={onTogglePhoneFrame}
+                title="Toggle Phone Chassis Mockup"
+                className={`py-2 px-2 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  showPhoneFrame
+                    ? 'bg-amber-600/30 border-amber-500/50 text-amber-300'
+                    : 'bg-white/5 border-white/10 text-slate-400'
+                }`}
+              >
+                <Smartphone className="w-3.5 h-3.5 text-amber-400" />
+                <span>Chassis</span>
+              </button>
             </div>
           </div>
         </div>

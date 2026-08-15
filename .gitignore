@@ -22,6 +22,11 @@ __pycache__/
 *.safetensors
 *.tar.gz
 *.zip
+*.ckpt
+piper_env/
+piper_dataset/
+piper-phonemize/
+piper-train/
 
 # Audio outputs & generated recordings
 backend/voice_dataset/mcqueen_model/

@@ -14,6 +14,7 @@
     "@capacitor/android": "^8.5.0",
     "@capacitor/core": "^8.5.0",
     "@diffusionstudio/piper-wasm": "^1.0.0",
+    "@mediapipe/tasks-vision": "^1.0.1",
     "@mintplex-labs/piper-tts-web": "^1.0.4",
     "@tailwindcss/vite": "^4.3.3",
     "clsx": "^2.1.1",

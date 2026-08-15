@@ -2,12 +2,15 @@ import React, { useState, useRef, useCallback } from 'react';
 import { Windshield } from './Windshield';
 import { ControlPanel } from './ControlPanel';
 import { MessageBar } from './MessageBar';
+import { VisionHUD } from './VisionHUD';
 import type { EmotionalState } from '../types/eye';
 import { EMOTIONS } from '../constants/emotions';
 import { useEyeMotion } from '../hooks/useEyeMotion';
 import { useBlinkSystem } from '../hooks/useBlinkSystem';
 import { useAIWebSocket } from '../hooks/useAIWebSocket';
 import { useLocalTTS } from '../hooks/useLocalTTS';
+import { useVisionPerception } from '../hooks/useVisionPerception';
+import type { AttentionOutput } from '../types/vision';
 
 const McQueenAIResponses: Record<string, string> = {
   'Are you ready to race?':
@@ -21,10 +24,12 @@ const McQueenAIResponses: Record<string, string> = {
 export const FaceScreen: React.FC = () => {
   const [currentEmotionState, setCurrentEmotionState] = useState<EmotionalState>('neutral');
   const [showPhoneFrame, setShowPhoneFrame] = useState<boolean>(false);
-  const [isFaceTracking, setIsFaceTracking] = useState<boolean>(true);
+  const [isVisionTracking, setIsVisionTracking] = useState<boolean>(true);
   const [enableMicroSaccades, setEnableMicroSaccades] = useState<boolean>(true);
   const [customPupilScale, setCustomPupilScale] = useState<number>(1.0);
   const [activeVoice, setActiveVoice] = useState<string>('vits_lite');
+  const [curiositySensitivity, setCuriositySensitivity] = useState<number>(0.65);
+  const [isVisionHUDOpen, setIsVisionHUDOpen] = useState<boolean>(false);
 
   const [isReceiving, setIsReceiving] = useState(false);
   const [receivedWords, setReceivedWords] = useState<string[]>([]);
@@ -34,25 +39,51 @@ export const FaceScreen: React.FC = () => {
   const totalWordsRef = useRef<number>(0);
   const streamedTextRef = useRef<string>('');
 
-  const emotionBase = EMOTIONS[currentEmotionState] || EMOTIONS.neutral;
-  const emotionConfig = {
-    ...emotionBase,
-    pupilScale: emotionBase.pupilScale * customPupilScale,
-  };
-
   const { gazeX, gazeY, parallaxX, parallaxY, setGaze, releaseGaze } = useEyeMotion({
     enableMicroSaccades,
     enableBreathing: true,
-    enableIdleLookAround: !isFaceTracking && !isReceiving,
-    saccadeSpeedMultiplier: emotionConfig.saccadeSpeed,
+    enableIdleLookAround: !isVisionTracking && !isReceiving,
+    saccadeSpeedMultiplier: 1.0,
   });
+
+  // MULTI-MODAL COMPUTER VISION & ATTENTION ARBITRATOR HOOK
+  const handleAttentionUpdate = useCallback(
+    (output: AttentionOutput) => {
+      if (isVisionTracking && output.confidence > 0.15) {
+        setGaze(output.smoothedPoint, false);
+      }
+    },
+    [isVisionTracking, setGaze]
+  );
+
+  const {
+    isLoading: isVisionLoading,
+    isReady: isVisionReady,
+    error: visionError,
+    cameraActive,
+    attentionData,
+  } = useVisionPerception({
+    enabled: isVisionTracking,
+    enablePose: true,
+    enableCuriosity: true,
+    curiositySensitivity,
+    onAttentionUpdate: handleAttentionUpdate,
+  });
+
+  // Emotional Pupil Modulation + Curiosity Dilation Boost
+  const emotionBase = EMOTIONS[currentEmotionState] || EMOTIONS.neutral;
+  const curiosityDilation = attentionData?.curiosityDilation ?? 0.0;
+  const emotionConfig = {
+    ...emotionBase,
+    pupilScale: emotionBase.pupilScale * customPupilScale * (1.0 + curiosityDilation),
+  };
 
   const { blinkProgress, triggerBlink } = useBlinkSystem({
     enabled: false,
     frequencyMultiplier: emotionConfig.blinkFrequencyMultiplier,
   });
 
-  // LOCAL TTS ENGINE!
+  // LOCAL TTS ENGINE
   const { isReady: isTTSReady, progressInfo: ttsProgressInfo, initLocalTTS, speakText } = useLocalTTS();
 
   React.useEffect(() => {
@@ -70,11 +101,9 @@ export const FaceScreen: React.FC = () => {
     const words = streamedTextRef.current.trim().split(/\s+/);
     totalWordsRef.current = words.length;
     setReceivedWords(words);
-    // DO NOT aggressively advance the index here! Wait for audio sync.
   }, []);
 
   const handleStreamEnd = useCallback(() => {
-    // Always speak client-side — works in any browser, zero server dependency
     if (isTTSReady && streamedTextRef.current) {
       speakText(
         streamedTextRef.current,
@@ -109,11 +138,9 @@ export const FaceScreen: React.FC = () => {
     onStreamEnd: handleStreamEnd,
     onWordSync: (wordIdx: number) => setCurrentWordIndex(wordIdx),
     totalWordsRef,
-    // Play backend audio stream for fine-tuned McQueen voice
     shouldPlayBackendAudio: true,
   });
 
-  // Voice selection — send set_voice to backend
   const handleVoiceChange = useCallback((voiceId: string) => {
     if (voiceId === 'xtts_original') {
       alert("WARNING: XTTS Original (5.6GB) requires a PC connection. Running in fallback mode.");
@@ -151,10 +178,9 @@ export const FaceScreen: React.FC = () => {
     if (tryRealAudio && activeVoice === 'vits_lite' && isTTSReady) {
       speakText(fullText, 
         () => {
-          animateWords(); // onStart
+          animateWords();
         }, 
         () => {
-          // onEnd
           setIsReceiving(false);
           setCurrentEmotionState('happy');
         }
@@ -170,8 +196,6 @@ export const FaceScreen: React.FC = () => {
     setCurrentWordIndex(-1);
     setCurrentEmotionState('thinking');
     
-    // We completely bypass WebSocket for TTS generation now and run locally!
-    // If backend is down, we use the matched presets.
     const sent = sendSpeechToAI(userText);
     if (!sent) {
       const matched =
@@ -181,9 +205,10 @@ export const FaceScreen: React.FC = () => {
     }
   };
 
+  // Manual Pointer Override (for touching/mouse dragging on screen)
   const handlePointerMove = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
-      if (!isFaceTracking || !containerRef.current) return;
+      if (cameraActive || !containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
       const normX = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
       const normY = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
@@ -191,14 +216,14 @@ export const FaceScreen: React.FC = () => {
       const isTouch = e.pointerType === 'touch' || e.pointerType === 'pen';
       setGaze({ x: normX, y: normY }, isTouch);
     },
-    [isFaceTracking, setGaze]
+    [cameraActive, setGaze]
   );
 
   const handlePointerUp = useCallback(() => {
-    if (isFaceTracking) {
+    if (!cameraActive) {
       releaseGaze();
     }
-  }, [isFaceTracking, releaseGaze]);
+  }, [cameraActive, releaseGaze]);
 
   return (
     <div
@@ -207,7 +232,7 @@ export const FaceScreen: React.FC = () => {
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
       onPointerCancel={handlePointerUp}
-      className="fixed inset-0 w-screen h-[100dvh] overflow-hidden select-none touch-none"
+      className="fixed inset-0 w-screen h-[100dvh] overflow-hidden select-none touch-none bg-black"
     >
       <Windshield
         emotion={emotionConfig}
@@ -226,12 +251,22 @@ export const FaceScreen: React.FC = () => {
         onSelectPreset={(preset) => handleSendMessage(preset)}
       />
 
+      {/* Vision Real-Time Status & Radar HUD */}
+      <VisionHUD
+        attentionData={attentionData}
+        cameraActive={cameraActive}
+        isLoading={isVisionLoading}
+        error={visionError}
+        isOpen={isVisionHUDOpen}
+        onToggleOpen={() => setIsVisionHUDOpen(!isVisionHUDOpen)}
+      />
+
       <ControlPanel
         currentEmotion={currentEmotionState}
         onSelectEmotion={setCurrentEmotionState}
         onTriggerBlink={triggerBlink}
-        isFaceTracking={isFaceTracking}
-        onToggleFaceTracking={() => setIsFaceTracking(!isFaceTracking)}
+        isVisionTracking={isVisionTracking}
+        onToggleVisionTracking={() => setIsVisionTracking(!isVisionTracking)}
         enableMicroSaccades={enableMicroSaccades}
         onToggleMicroSaccades={() => setEnableMicroSaccades(!enableMicroSaccades)}
         showPhoneFrame={showPhoneFrame}
@@ -240,10 +275,15 @@ export const FaceScreen: React.FC = () => {
         onChangePupilScale={setCustomPupilScale}
         activeVoice={activeVoice}
         onVoiceChange={handleVoiceChange}
+        curiositySensitivity={curiositySensitivity}
+        onChangeCuriositySensitivity={setCuriositySensitivity}
+        isVisionHUDOpen={isVisionHUDOpen}
+        onToggleVisionHUD={() => setIsVisionHUDOpen(!isVisionHUDOpen)}
+        isVisionReady={isVisionReady}
       />
 
-      {/* AI connection badge */}
-      <div className="fixed top-4 left-4 z-50 flex flex-col gap-2">
+      {/* Connection & Status Badges */}
+      <div className="fixed top-4 left-4 z-50 flex flex-col gap-2 pointer-events-none">
         <div className="flex items-center gap-2 px-3 py-1 bg-slate-950/70 backdrop-blur-md rounded-full border border-white/10 text-[11px] text-slate-300">
           <span className={`w-2 h-2 rounded-full ${isAIConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
           <span>{isAIConnected ? 'Emiot AI Active' : 'AI Offline (Fallback)'}</span>
