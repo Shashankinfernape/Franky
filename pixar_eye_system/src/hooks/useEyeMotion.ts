@@ -34,7 +34,6 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
 
   // Refs for animation physics loop
   const gazeRef = useRef<GazePoint>({ x: 0, y: 0 });
-  const velocityRef = useRef<GazePoint>({ x: 0, y: 0 });
   const targetRef = useRef<GazePoint>({ x: 0, y: 0 });
   const microOffsetRef = useRef<GazePoint>({ x: 0, y: 0 });
   const lastUserInteractionTime = useRef<number>(Date.now());
@@ -90,13 +89,13 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
     };
   }, [enableMicroSaccades, enableIdleLookAround, saccadeSpeedMultiplier]);
 
-  // 60 FPS Ultra-Fast Responsive Pixar Spring Engine
+  // 60 FPS Unconditionally Stable Exponential Smoothing Engine (Fast, Silky Smooth, Zero NaN)
   useEffect(() => {
     let animFrameId: number;
     let lastFrameTime = performance.now();
 
     const updatePhysics = (now: number) => {
-      const dt = Math.min(0.033, Math.max(0.001, (now - lastFrameTime) / 1000));
+      const dt = Math.min(0.05, Math.max(0.001, (now - lastFrameTime) / 1000));
       lastFrameTime = now;
 
       // Breathing Rhythm (0.2 Hz sinusoidal drift)
@@ -104,48 +103,24 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
       const breathingX = enableBreathing ? Math.cos(now * 0.0008) * 0.003 : 0;
 
       // Desired target + micro offsets + breathing
-      const finalTargetX = targetRef.current.x + microOffsetRef.current.x + breathingX;
-      const finalTargetY = targetRef.current.y + microOffsetRef.current.y + breathingY;
+      const finalTargetX = (targetRef.current.x || 0) + microOffsetRef.current.x + breathingX;
+      const finalTargetY = (targetRef.current.y || 0) + microOffsetRef.current.y + breathingY;
 
       if (isUserInteractingRef.current && isTouchRef.current) {
         // Direct touch tracking (Instant)
         gazeRef.current.x = finalTargetX;
         gazeRef.current.y = finalTargetY;
-        velocityRef.current.x = 0;
-        velocityRef.current.y = 0;
       } else {
-        // Fast, Ultra-Responsive Spring Dynamics (Fast ~40-60ms response)
-        const stiffness = 650.0; // High responsiveness
-        const damping = 38.0;    // Critically damped: instant stop with zero vibration
-
-        // Spring acceleration
-        const forceX = (finalTargetX - gazeRef.current.x) * stiffness;
-        const forceY = (finalTargetY - gazeRef.current.y) * stiffness;
-
-        // Velocity integration
-        velocityRef.current.x += forceX * dt;
-        velocityRef.current.y += forceY * dt;
-
-        // Viscous damping
-        velocityRef.current.x *= Math.max(0, 1 - damping * dt);
-        velocityRef.current.y *= Math.max(0, 1 - damping * dt);
-
-        // Fast speed limit
-        const maxSpeed = 18.0;
-        const currentSpeed = Math.sqrt(
-          velocityRef.current.x * velocityRef.current.x +
-          velocityRef.current.y * velocityRef.current.y
-        );
-        if (currentSpeed > maxSpeed) {
-          const scale = maxSpeed / currentSpeed;
-          velocityRef.current.x *= scale;
-          velocityRef.current.y *= scale;
-        }
-
-        // Position integration
-        gazeRef.current.x += velocityRef.current.x * dt;
-        gazeRef.current.y += velocityRef.current.y * dt;
+        // Exponential Smoothing: Fast 50ms time constant (tau = 0.05)
+        // 100% mathematically stable, instant tracking response, zero twitching
+        const smoothFactor = 1.0 - Math.exp(-dt / 0.055);
+        gazeRef.current.x += (finalTargetX - gazeRef.current.x) * smoothFactor;
+        gazeRef.current.y += (finalTargetY - gazeRef.current.y) * smoothFactor;
       }
+
+      // NaN Guard
+      if (isNaN(gazeRef.current.x)) gazeRef.current.x = 0;
+      if (isNaN(gazeRef.current.y)) gazeRef.current.y = 0;
 
       // Parallax Highlight calculation
       const pX = -gazeRef.current.x * 10;
@@ -169,8 +144,8 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
 
   // Set user gaze target explicitly (clamped -1 to 1)
   const setGaze = (point: GazePoint, isTouch: boolean = true) => {
-    const clampedX = Math.max(-1, Math.min(1, point.x));
-    const clampedY = Math.max(-1, Math.min(1, point.y));
+    const clampedX = Math.max(-1, Math.min(1, isNaN(point.x) ? 0 : point.x));
+    const clampedY = Math.max(-1, Math.min(1, isNaN(point.y) ? 0 : point.y));
 
     targetRef.current = { x: clampedX, y: clampedY };
     isUserInteractingRef.current = true;
