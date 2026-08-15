@@ -40,7 +40,7 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
   const isUserInteractingRef = useRef(false);
   const isTouchRef = useRef(false);
 
-  // Micro-Saccades (Subtle physiological fixations, 1-2px)
+  // Micro-Saccades (Subtle physiological fixations, 1px)
   useEffect(() => {
     let saccadeTimer: ReturnType<typeof setTimeout> | null = null;
     let idleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -48,11 +48,11 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
     const scheduleSaccade = () => {
       if (!enableMicroSaccades) return;
 
-      const delay = (2000 + Math.random() * 2500) / saccadeSpeedMultiplier;
+      const delay = (2200 + Math.random() * 2500) / saccadeSpeedMultiplier;
       saccadeTimer = setTimeout(() => {
         microOffsetRef.current = {
-          x: (Math.random() - 0.5) * 0.015,
-          y: (Math.random() - 0.5) * 0.010,
+          x: (Math.random() - 0.5) * 0.012,
+          y: (Math.random() - 0.5) * 0.008,
         };
         scheduleSaccade();
       }, delay);
@@ -67,10 +67,10 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
           isUserInteractingRef.current = false;
           isTouchRef.current = false;
           const idleTargets: GazePoint[] = [
-            { x: 0.18, y: -0.06 },
-            { x: -0.18, y: -0.05 },
-            { x: 0.10, y: 0.12 },
-            { x: -0.10, y: 0.10 },
+            { x: 0.15, y: -0.05 },
+            { x: -0.15, y: -0.04 },
+            { x: 0.08, y: 0.08 },
+            { x: -0.08, y: 0.06 },
             { x: 0, y: 0 },
           ];
           const randomPick = idleTargets[Math.floor(Math.random() * idleTargets.length)];
@@ -89,7 +89,7 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
     };
   }, [enableMicroSaccades, enableIdleLookAround, saccadeSpeedMultiplier]);
 
-  // 60 FPS Unconditionally Stable Exponential Smoothing Engine (Fast, Silky Smooth, Zero NaN)
+  // 60 FPS Silky Smooth Pixar Glides Engine (tau = 0.085s)
   useEffect(() => {
     let animFrameId: number;
     let lastFrameTime = performance.now();
@@ -99,8 +99,8 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
       lastFrameTime = now;
 
       // Breathing Rhythm (0.2 Hz sinusoidal drift)
-      const breathingY = enableBreathing ? Math.sin(now * 0.0015) * 0.005 : 0;
-      const breathingX = enableBreathing ? Math.cos(now * 0.0008) * 0.003 : 0;
+      const breathingY = enableBreathing ? Math.sin(now * 0.0015) * 0.004 : 0;
+      const breathingX = enableBreathing ? Math.cos(now * 0.0008) * 0.002 : 0;
 
       // Desired target + micro offsets + breathing
       const finalTargetX = (targetRef.current.x || 0) + microOffsetRef.current.x + breathingX;
@@ -111,9 +111,8 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
         gazeRef.current.x = finalTargetX;
         gazeRef.current.y = finalTargetY;
       } else {
-        // Exponential Smoothing: Fast 50ms time constant (tau = 0.05)
-        // 100% mathematically stable, instant tracking response, zero twitching
-        const smoothFactor = 1.0 - Math.exp(-dt / 0.055);
+        // Silky smooth, organic exponential filter (tau = 85ms)
+        const smoothFactor = 1.0 - Math.exp(-dt / 0.085);
         gazeRef.current.x += (finalTargetX - gazeRef.current.x) * smoothFactor;
         gazeRef.current.y += (finalTargetY - gazeRef.current.y) * smoothFactor;
       }
@@ -123,8 +122,8 @@ export function useEyeMotion(options: EyeMotionOptions = {}): EyeMotionOutput {
       if (isNaN(gazeRef.current.y)) gazeRef.current.y = 0;
 
       // Parallax Highlight calculation
-      const pX = -gazeRef.current.x * 10;
-      const pY = -gazeRef.current.y * 6;
+      const pX = -gazeRef.current.x * 6;
+      const pY = -gazeRef.current.y * 4;
 
       // Direct write to Framer Motion values
       gazeX.set(gazeRef.current.x);
