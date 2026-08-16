@@ -1,20 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { TtsSession } from '@mintplex-labs/piper-tts-web';
 
-// Intercept fetch to reroute 'mcqueen' voice requests to our local /models/ directory
-const originalFetch = window.fetch;
-window.fetch = async (input, init) => {
-  const url = typeof input === 'string' ? input : (input instanceof Request ? input.url : '');
-  if (url.includes('diffusionstudio/piper-voices') && url.includes('/mcqueen/')) {
-    if (url.endsWith('.onnx')) {
-      return originalFetch('/models/mcqueen.onnx', init);
-    } else if (url.endsWith('.json')) {
-      return originalFetch('/models/mcqueen.onnx.json', init);
-    }
-  }
-  return originalFetch(input, init);
-};
-
 export function useLocalTTS() {
   const [isReady, setIsReady] = useState(false);
   const [progressInfo, setProgressInfo] = useState<string>('');
@@ -25,7 +11,8 @@ export function useLocalTTS() {
       setProgressInfo('Loading voice model (60MB)...');
       
       const session = await TtsSession.create({
-        voiceId: 'mcqueen',
+        // Uses the user's patch-piper.cjs mock ID to load /voice/piper_voice.onnx
+        voiceId: 'en_US-hfc_female-medium',
         progress: (p) => {
           setProgressInfo(`Downloading: ${Math.round((p.loaded / p.total) * 100)}%`);
         },
