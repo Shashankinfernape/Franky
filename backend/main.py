@@ -121,13 +121,10 @@ async def websocket_endpoint(websocket: WebSocket):
                                     "emotion": target_emotion
                                 })
 
-                            # Fire TTS ASAP — 4 words = instant feel at Groq speed
-                            word_count = len(sentence_buffer.split())
+                            # Fire TTS on full sentences to preserve AI voice context and modulation
                             at_boundary = bool(re.search(r'[.!?\n]', token))
-                            at_comma_pause = bool(re.search(r'[,;:]', token)) and word_count >= 3
-                            at_word_limit = word_count >= 4
-
-                            if at_boundary or at_comma_pause or at_word_limit:
+                            
+                            if at_boundary:
                                 sentence_to_speak = sentence_buffer.strip()
                                 sentence_buffer = ""
                                 if sentence_to_speak:
