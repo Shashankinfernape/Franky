@@ -249,8 +249,10 @@ class TTSService:
                 return PiperVoice.load(str(model_path))
 
             self._piper_voice = await loop.run_in_executor(None, _load)
+            self._piper_error = None
             print("[Piper ONNX] ✅ Piper ONNX Neural Voice Engine loaded successfully!")
         except Exception as e:
+            self._piper_error = str(e)
             print(f"[Piper ONNX Error] {e}")
 
     # ── Edge TTS Fallback (Cloud, instant) ───────────────────────────────────

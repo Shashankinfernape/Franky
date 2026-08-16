@@ -50,6 +50,7 @@ def health_check():
         "status": "online",
         "service": "Emiot AI Companion Core",
         "xtts_healthy": tts_service._xtts_healthy,
+        "piper_error": getattr(tts_service, "_piper_error", None)
     }
 
 @app.get("/reset-tts")
