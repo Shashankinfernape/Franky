@@ -199,18 +199,36 @@ class TTSService:
     # ── Piper ONNX Lite (CPU, ~15 MB, Sub-100ms Instant Mobile Engine) ────────
 
     async def _synthesize_piper_onnx(self, text: str) -> AsyncGenerator[bytes, None]:
-        # Try fine-tuned McQueen StyleTTS2 model if available and loaded
+        if not hasattr(self, "_piper_voice") or not self._piper_voice:
+            await self._load_piper_model()
+
+        if not hasattr(self, "_piper_voice") or not self._piper_voice:
+            print("[Piper ONNX] Fallback to edge_tts because model not loaded")
+            async for chunk in self._synthesize_edge(text):
+                yield chunk
+            return
+
         try:
-            from services.mcqueen_styletts2_service import mcqueen_styletts2_engine
-            if mcqueen_styletts2_engine.is_loaded:
-                loop = asyncio.get_event_loop()
-                audio = await loop.run_in_executor(None, mcqueen_styletts2_engine.synthesize_wav_bytes, text)
-                if audio:
-                    print(f"[McQueen StyleTTS2] ✅ {len(audio):,} bytes — '{text[:50]}'")
-                    yield audio
-                    return
+            loop = asyncio.get_event_loop()
+            def _synth():
+                import io
+                import wave
+                out = io.BytesIO()
+                with wave.open(out, 'wb') as wav_file:
+                    wav_file.setnchannels(1)
+                    wav_file.setsampwidth(2)
+                    wav_file.setframerate(self._piper_voice.config.sample_rate)
+                    self._piper_voice.synthesize_wav(text, wav_file)
+                out.seek(0)
+                return out.read()
+
+            audio = await loop.run_in_executor(None, _synth)
+            if audio:
+                print(f"[Piper ONNX Lite] ✅ {len(audio):,} bytes — '{text[:50]}'")
+                yield audio
+                return
         except Exception as e:
-            print(f"[McQueen StyleTTS2] Error: {e}")
+            print(f"[Piper ONNX Error] {e}")
 
         # Fall back to instant edge_tts
         async for chunk in self._synthesize_edge(text):
