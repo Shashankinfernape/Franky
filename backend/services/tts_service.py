@@ -100,8 +100,8 @@ class TTSService:
                 yield chunk
 
         elif self._active_voice == "vits_lite":
-            async for chunk in self._synthesize_piper_onnx(clean):
-                yield chunk
+            # Client browser handles TTS natively via ONNX WASM! We just yield silence.
+            yield b""
 
         else:  # edge_neural
             async for chunk in self._synthesize_edge(clean):
